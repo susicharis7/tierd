@@ -1,12 +1,12 @@
-﻿# Explore page: Supabase checklist
+# Explore page: Supabase checklist
 
-The Explore feed uses **Storage** for post images and **`public.profiles`** for author names, search, and â€œNew on Tierdâ€. If either is misconfigured, the UI may look empty or show â€œAnonymous Builderâ€ while posts still load.
+The Explore feed uses **Storage** for post images and **`public.profiles`** for author names, search, and “New on Tierd”. If either is misconfigured, the UI may look empty or show “Anonymous Builder” while posts still load.
 
 ## 1. Storage bucket `feed-images`
 
 The app uploads to bucket **`feed-images`** (name is exact and case-sensitive).
 
-1. In the Supabase Dashboard: **Storage** â†’ **New bucket**.
+1. In the Supabase Dashboard: **Storage** → **New bucket**.
 2. Name: **`feed-images`**
 3. **Public bucket**: ON (so `getPublicUrl` works for feed images without signed URLs).
 
@@ -14,33 +14,33 @@ The app uploads to bucket **`feed-images`** (name is exact and case-sensitive).
 
 If SQL on `storage.objects` fails with *must be owner of table objects*, use the bucket **Policies** UI instead:
 
-- **SELECT**: allow read for `anon` and `authenticated` (or â€œpublicâ€) for objects in `feed-images`.
+- **SELECT**: allow read for `anon` and `authenticated` (or “public”) for objects in `feed-images`.
 - **INSERT**: allow `authenticated` only, scoped to bucket `feed-images`.
 
 See comments at the bottom of [`migration.sql`](../supabase/migration.sql) for the intended rules.
 
 ### Verify (browser)
 
-With DevTools â†’ **Network**, post with an image and inspect the storage request.  
-`Bucket not found` â†’ bucket name or project URL is wrong.  
+With DevTools → **Network**, post with an image and inspect the storage request.  
+`Bucket not found` → bucket name or project URL is wrong.  
 RLS violations mention **row-level security** on `storage.objects`.
 
 ### Debugging Storage RLS: check request headers (do this before adding policies)
 
 The app uses **one** Supabase client for auth and Storage (`src/lib/supabase.ts`); uploads should include a user JWT when you are signed in.
 
-On the **failing** upload request (URL like `.../storage/v1/object/feed-images/...`), open **Headers** â†’ **Request headers**:
+On the **failing** upload request (URL like `.../storage/v1/object/feed-images/...`), open **Headers** → **Request headers**:
 
 | Header | What to check |
 |--------|----------------|
-| **`Authorization`** | Must be `Bearer <long-jwt>`. Policies scoped to **`authenticated`** require this. If **`Authorization` is missing**, Storage evaluates the role as **`anon`** and an authenticated-only INSERT policy will not match â†’ RLS-style errors. |
-| **`apikey`** | Present on normal `supabase-js` calls; should match your projectâ€™s anon / publishable key. |
+| **`Authorization`** | Must be `Bearer <long-jwt>`. Policies scoped to **`authenticated`** require this. If **`Authorization` is missing**, Storage evaluates the role as **`anon`** and an authenticated-only INSERT policy will not match → RLS-style errors. |
+| **`apikey`** | Present on normal `supabase-js` calls; should match your project’s anon / publishable key. |
 
 **Response:** Status **400** with a body mentioning **row-level security** on **`storage.objects`** means the request reached Storage but **`WITH CHECK`** on `INSERT` failed (wrong role, wrong bucket, or path/policy mismatch).
 
 | What you see | Likely cause |
 |--------------|----------------|
-| **`Authorization` missing** | No session in the JS client at upload time (signed out, expired session, cleared site data, or rare timing). Not a â€œsecond clientâ€ issue in this repo. |
+| **`Authorization` missing** | No session in the JS client at upload time (signed out, expired session, cleared site data, or rare timing). Not a “second client” issue in this repo. |
 | **`Authorization` present**, still RLS | Policy expression, `bucket_id`, or path rules (e.g. first folder must equal `auth.uid()`). |
 
 **React `session` vs HTTP:** [`AuthProvider`](../frontend/src/features/authFeatures/AuthProvider.tsx) may skip updating React state on `TOKEN_REFRESHED` / `USER_UPDATED`, but **`supabase-js` still refreshes the internal session** used for requests. Trust the **Network** tab on the upload, not only React DevTools.
@@ -48,12 +48,12 @@ On the **failing** upload request (URL like `.../storage/v1/object/feed-images/.
 **If Bearer is missing but the UI still looks logged in**
 
 - **Same project:** `VITE_SUPABASE_URL` and key in the `.env` file Vite loads (see root `vite.config.ts` `envDir`) must match the Supabase project where the bucket and policies live.
-- **Session persistence:** Application â†’ Local Storage (or session storage) for Supabase auth keys; extensions or privacy settings can block them.
+- **Session persistence:** Application → Local Storage (or session storage) for Supabase auth keys; extensions or privacy settings can block them.
 - **Timing:** Unlikely if you post after the page has settled; in **development**, the client logs `[Explore:dev] uploadFeedImage` session state right before upload (see below).
 
 ### Session present but upload still fails: `new row violates row-level security policy`
 
-If the console shows **`client session present: true`** (and usually `userIdParamMatchesSession: true`) but you still get **`StorageApiError: new row violates row-level security policy`**, the request **is authenticated**. The problem is **not** a missing `Authorization` header â€” it is **`storage.objects` INSERT** RLS: no policy allows the new row, or every applicable **`WITH CHECK`** fails.
+If the console shows **`client session present: true`** (and usually `userIdParamMatchesSession: true`) but you still get **`StorageApiError: new row violates row-level security policy`**, the request **is authenticated**. The problem is **not** a missing `Authorization` header — it is **`storage.objects` INSERT** RLS: no policy allows the new row, or every applicable **`WITH CHECK`** fails.
 
 **1. Inspect what Postgres has today** (SQL Editor, as project owner):
 
@@ -68,18 +68,18 @@ Look for at least one policy with **`cmd` = `INSERT`** (or `ALL`) whose **`roles
 
 **2. Fix via Dashboard (recommended if SQL on `storage.objects` errors)**
 
-1. **Storage** â†’ bucket **`feed-images`** â†’ **Policies** (or **Configuration** â†’ **Policies** for that bucket).
+1. **Storage** → bucket **`feed-images`** → **Policies** (or **Configuration** → **Policies** for that bucket).
 2. Add policy: operation **INSERT** (upload), target **authenticated** users.
 3. **Policy definition** should allow uploads into this bucket. A minimal rule that matches this app is: only objects in bucket `feed-images` (the UI often sets this for you when the policy is scoped to the bucket).
 
 **3. Fix via SQL** (if the editor accepts it): run [`storage_feed_images_rls.sql`](../supabase/storage_feed_images_rls.sql). That creates:
 
-- **SELECT** `using (bucket_id = 'feed-images')` â€” public read of objects in this bucket.
-- **INSERT** `to authenticated` `with check (bucket_id = 'feed-images')` â€” any signed-in user can upload into this bucket (same as the tail of [`migration.sql`](../supabase/migration.sql)).
+- **SELECT** `using (bucket_id = 'feed-images')` — public read of objects in this bucket.
+- **INSERT** `to authenticated` `with check (bucket_id = 'feed-images')` — any signed-in user can upload into this bucket (same as the tail of [`migration.sql`](../supabase/migration.sql)).
 
 **4. If you added a stricter rule** (e.g. first path segment must equal `auth.uid()`), it must match the app path `{auth_user_uuid}/{timestamp}.{ext}`. If it still fails, temporarily replace it with the **minimal** `bucket_id = 'feed-images'` INSERT policy above to confirm; then re-tighten.
 
-**5. Conflicting or duplicate policies** â€” Rare, but remove obsolete **INSERT** policies that are too narrow so a permissive one can apply (Postgres combines multiple permissive policies with **OR** for the same command).
+**5. Conflicting or duplicate policies** — Rare, but remove obsolete **INSERT** policies that are too narrow so a permissive one can apply (Postgres combines multiple permissive policies with **OR** for the same command).
 
 ---
 
@@ -103,15 +103,15 @@ If every `SELECT` policy is restricted to `authenticated` or `auth.uid() = id` o
 
 ### Fix
 
-Apply section **0** in [`migration.sql`](../supabase/migration.sql) (â€œProfiles are publicly readableâ€), or add an equivalent policy in the SQL Editor.
+Apply section **0** in [`migration.sql`](../supabase/migration.sql) (“Profiles are publicly readable”), or add an equivalent policy in the SQL Editor.
 
 ### Verify (browser)
 
 While **logged out**, reload Explore and find `/rest/v1/profiles` in the Network tab:
 
-- **200** with a JSON array of profiles â†’ OK.
-- **401 / 403** or error body â†’ policy still blocks anon.
-- **200** with `[]` and you know users exist in Table Editor â†’ often still RLS filtering all rows; re-check policies.
+- **200** with a JSON array of profiles → OK.
+- **401 / 403** or error body → policy still blocks anon.
+- **200** with `[]` and you know users exist in Table Editor → often still RLS filtering all rows; re-check policies.
 
 ---
 
@@ -125,5 +125,5 @@ Confirm `.env` has **`VITE_SUPABASE_URL`** (and publishable/anon key) for the **
 
 In development, the client logs extra hints when Supabase returns known errors (see `frontend/src/features/exploreFeatures/exploreErrors.ts`). Composer failures also show short actionable copy when the bucket is missing or RLS blocks an operation.
 
-Immediately **before** each feed image upload, **`uploadFeedImage`** logs whether the shared Supabase client has a session and whether the param `userId` matches `session.user.id` â€” use this together with the Network headers check above.
+Immediately **before** each feed image upload, **`uploadFeedImage`** logs whether the shared Supabase client has a session and whether the param `userId` matches `session.user.id` — use this together with the Network headers check above.
 

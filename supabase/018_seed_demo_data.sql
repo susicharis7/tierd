@@ -1,4 +1,4 @@
--- 017_seed_demo_data.sql
+-- 018_seed_demo_data.sql
 -- Demo seed data for development/staging only.
 -- Requires migrations 011-016.
 

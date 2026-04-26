@@ -46,4 +46,4 @@ To expose the dev server on your LAN (e.g. phone testing), run: `npm run dev -- 
 
 ### Supabase Explore (feed, search, images)
 
-If post images fail with **Bucket not found**, or logged-out Explore shows **Anonymous Builder** / empty search / “No builders yet” while posts still appear, configure Storage and `profiles` RLS as described in **[supabase/EXPLORE_SETUP.md](supabase/EXPLORE_SETUP.md)**. In development, the browser console also prints `[Explore:dev]` hints when Supabase returns a diagnosable error.
+If post images fail with **Bucket not found**, or logged-out Explore shows **Anonymous Builder** / empty search / “No builders yet” while posts still appear, configure Storage and `profiles` RLS as described in **[docs/EXPLORE_SETUP.md](docs/EXPLORE_SETUP.md)**. In development, the browser console also prints `[Explore:dev]` hints when Supabase returns a diagnosable error.

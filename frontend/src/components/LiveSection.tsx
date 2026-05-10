@@ -1,29 +1,51 @@
 import { motion } from "framer-motion";
-import { TrendingUp, Zap, MessageSquare, Star, Clock, Trophy } from "lucide-react";
+import { TrendingUp, Clock, Trophy } from "lucide-react";
 import { Link } from "react-router-dom";
+import {
+  useActiveChallengeQuery,
+  useRisingDevelopersQuery,
+} from "../features/rankingFeatures/useRankingData";
 
 const posts = [
   {
-    author: "Marko", handle: "Backend Engineer", avatar: "M", time: "2h ago",
-    content: "Rewrote the main matching service in Rust. Latency dropped from 250ms to 12ms. Deployed to production.",
-    reactions: 89, comments: 24, xp: "+350", tags: ["Rust", "Performance"], tier: "A-TIER",
+    author: "Marko",
+    handle: "Backend Engineer",
+    avatar: "M",
+    time: "2h ago",
+    content:
+      "Rewrote the main matching service in Rust. Latency dropped from 250ms to 12ms. Deployed to production.",
+    reactions: 89,
+    comments: 24,
+    xp: "+350",
+    tags: ["Rust", "Performance"],
+    tier: "A-TIER",
   },
   {
-    author: "Elena", handle: "Frontend Architect", avatar: "E", time: "5h ago",
-    content: "Published a new open-source React component library. 2k stars in the first 24h.",
-    reactions: 124, comments: 37, xp: "+500", tags: ["React", "Open Source"], tier: "S-TIER",
+    author: "Elena",
+    handle: "Frontend Architect",
+    avatar: "E",
+    time: "5h ago",
+    content:
+      "Published a new open-source React component library. 2k stars in the first 24h.",
+    reactions: 124,
+    comments: 37,
+    xp: "+500",
+    tags: ["React", "Open Source"],
+    tier: "S-TIER",
   },
   {
-    author: "Tariq", handle: "AI Researcher", avatar: "T", time: "1d ago",
-    content: "Fine-tuned a custom LLM for internal docs. Achieved 94% accuracy on domain-specific queries.",
-    reactions: 56, comments: 11, xp: "+420", tags: ["AI", "ML"], tier: "S-TIER",
+    author: "Tariq",
+    handle: "AI Researcher",
+    avatar: "T",
+    time: "1d ago",
+    content:
+      "Fine-tuned a custom LLM for internal docs. Achieved 94% accuracy on domain-specific queries.",
+    reactions: 56,
+    comments: 11,
+    xp: "+420",
+    tags: ["AI", "ML"],
+    tier: "S-TIER",
   },
-];
-
-const topDevs = [
-  { name: "Dev_Mirza", score: "14.2k", delta: "+120" },
-  { name: "Amir_XYZ", score: "12.8k", delta: "+45" },
-  { name: "Dino_Tech", score: "11.5k", delta: "+210" },
 ];
 
 const container = {
@@ -36,7 +58,21 @@ const item = {
   show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 };
 
+function formatTimeLeft(endsAtIso: string): string {
+  const now = Date.now();
+  const end = new Date(endsAtIso).getTime();
+  const diffMs = Math.max(0, end - now);
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diffMs / (1000 * 60 * 60)) % 24);
+  return `${days}d ${hours}h`;
+}
+
 const LiveSection = () => {
+  const risingQuery = useRisingDevelopersQuery(3);
+  const activeChallengeQuery = useActiveChallengeQuery();
+  const risingDevs = risingQuery.data ?? [];
+  const activeChallenge = activeChallengeQuery.data;
+
   return (
     <section className="relative py-24 border-t border-border">
       <div className="section-container">
@@ -52,10 +88,13 @@ const LiveSection = () => {
               The Feed<span className="text-ember">.</span>
             </h2>
             <p className="text-muted-foreground text-sm max-w-lg">
-              Real-time accomplishments, regional leaderboards, and trending builders.
+              Real-time accomplishments, global leaderboards, and rising builders.
             </p>
           </div>
-          <Link to="/explore" className="hidden sm:flex items-center gap-1.5 text-xs font-display font-semibold text-ember uppercase tracking-wider hover:text-ember-glow transition-colors">
+          <Link
+            to="/explore"
+            className="hidden sm:flex items-center gap-1.5 text-xs font-display font-semibold text-ember uppercase tracking-wider hover:text-ember-glow transition-colors"
+          >
             View Full Feed
             <TrendingUp size={12} />
           </Link>
@@ -68,7 +107,6 @@ const LiveSection = () => {
           viewport={{ once: true }}
           className="grid lg:grid-cols-3 gap-6"
         >
-          {/* Feed column */}
           <div className="lg:col-span-2 space-y-4">
             {posts.map((post, i) => (
               <motion.div key={i} variants={item} className="glass-surface-hover p-5">
@@ -79,71 +117,114 @@ const LiveSection = () => {
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <p className="font-display font-bold text-sm text-foreground">{post.author}</p>
-                        <span className="tier-badge text-[9px] py-0 px-1.5">{post.tier}</span>
+                        <p className="font-display font-bold text-sm text-foreground">
+                          {post.author}
+                        </p>
+                        <span className="tier-badge text-[9px] py-0 px-1.5">
+                          {post.tier}
+                        </span>
                       </div>
-                      <p className="text-xs text-muted-foreground">{post.handle} · {post.time}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {post.handle} · {post.time}
+                      </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ border: "1px solid hsl(var(--ember) / 0.2)" }}>
+                  <div
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+                    style={{ border: "1px solid hsl(var(--ember) / 0.2)" }}
+                  >
                     <Trophy size={12} className="text-ember" />
-                    <span className="text-xs font-display font-bold text-ember">{post.xp}</span>
+                    <span className="text-xs font-display font-bold text-ember">
+                      {post.xp}
+                    </span>
                   </div>
                 </div>
-                <p className="text-sm text-foreground/85 leading-relaxed mb-3">{post.content}</p>
+                <p className="text-sm text-foreground/85 leading-relaxed mb-3">
+                  {post.content}
+                </p>
                 <div className="flex items-center gap-2 flex-wrap">
                   {post.tags.map((tag) => (
-                    <span key={tag} className="text-[10px] px-2.5 py-1 rounded-full bg-muted/50 text-muted-foreground">#{tag}</span>
+                    <span
+                      key={tag}
+                      className="text-[10px] px-2.5 py-1 rounded-full bg-muted/50 text-muted-foreground"
+                    >
+                      #{tag}
+                    </span>
                   ))}
                 </div>
               </motion.div>
             ))}
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-4">
-            {/* Top in Bosnia */}
             <motion.div variants={item} className="glass-surface p-5">
               <h3 className="font-display font-bold text-xs text-muted-foreground mb-4 flex items-center gap-2 uppercase tracking-wider">
                 <TrendingUp size={14} className="text-ember" />
-                Top in Bosnia
+                Rising Builders
               </h3>
+              {risingQuery.isPending && (
+                <p className="text-xs text-muted-foreground">Loading rising data...</p>
+              )}
               <div className="space-y-3">
-                {topDevs.map((d, i) => (
-                  <div key={i} className="flex items-center justify-between">
+                {risingDevs.map((dev, i) => (
+                  <div key={`${dev.profileId}-${dev.rank}`} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="font-display font-bold text-sm text-muted-foreground w-4">{i + 1}</span>
-                      <div className="w-8 h-8 rounded-full bg-muted/40 flex items-center justify-center text-xs font-bold">{d.name[0]}</div>
-                      <p className="text-sm font-medium text-foreground">{d.name}</p>
+                      <span className="font-display font-bold text-sm text-muted-foreground w-4">
+                        {i + 1}
+                      </span>
+                      <div className="w-8 h-8 rounded-full bg-muted/40 flex items-center justify-center text-xs font-bold">
+                        {(dev.fullName || dev.username || "U").charAt(0).toUpperCase()}
+                      </div>
+                      <p className="text-sm font-medium text-foreground">
+                        {dev.fullName}
+                      </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-display font-bold text-foreground">{d.score}</p>
-                      <p className="text-[10px] text-ember font-medium">{d.delta}</p>
+                      <p className="text-sm font-display font-bold text-foreground">
+                        {dev.score.toLocaleString()}
+                      </p>
+                      <p className="text-[10px] text-ember font-medium">
+                        {dev.delta >= 0 ? "+" : ""}
+                        {dev.delta}
+                      </p>
                     </div>
                   </div>
                 ))}
               </div>
             </motion.div>
 
-            {/* Active Challenge */}
             <motion.div variants={item} className="glass-surface p-5">
               <h3 className="font-display font-bold text-xs text-muted-foreground mb-4 flex items-center gap-2 uppercase tracking-wider">
                 <Clock size={14} className="text-muted-foreground" />
                 Active Challenge
               </h3>
               <div className="p-4 rounded-md bg-muted/20 mb-4">
-                <h4 className="font-display font-bold text-sm text-foreground mb-1">Build a Redis Clone</h4>
-                <p className="text-xs text-muted-foreground mb-3">Implement a basic in-memory key-value store in C or Rust.</p>
+                <h4 className="font-display font-bold text-sm text-foreground mb-1">
+                  {activeChallenge?.title ?? "No active challenge"}
+                </h4>
+                <p className="text-xs text-muted-foreground mb-3">
+                  {activeChallenge?.description ??
+                    "Challenges will appear here when published and active."}
+                </p>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-ember font-semibold">Reward: 1000 pts</span>
-                  <span className="text-muted-foreground">Ends in 2d 14h</span>
+                  <span className="text-ember font-semibold">
+                    Reward: +{activeChallenge?.rewardPoints ?? 0} pts
+                  </span>
+                  <span className="text-muted-foreground">
+                    {activeChallenge
+                      ? `Ends in ${formatTimeLeft(activeChallenge.endsAt)}`
+                      : "No timer"}
+                  </span>
                 </div>
               </div>
               <button className="btn-ghost text-xs w-full py-2.5">Join Challenge</button>
             </motion.div>
 
-            {/* Sign up nudge */}
-            <motion.div variants={item} className="glass-surface p-5" style={{ borderColor: "hsl(var(--ember) / 0.15)" }}>
+            <motion.div
+              variants={item}
+              className="glass-surface p-5"
+              style={{ borderColor: "hsl(var(--ember) / 0.15)" }}
+            >
               <p className="font-display font-semibold text-sm text-foreground mb-2">
                 Join the network
               </p>
@@ -162,3 +243,4 @@ const LiveSection = () => {
 };
 
 export default LiveSection;
+

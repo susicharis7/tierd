@@ -6,7 +6,7 @@ import Footer from "../../../components/Footer";
 import {
   MapPin, BadgeCheck, ExternalLink, Flame, Zap,
   Github, Globe, Trophy, TrendingUp,
-  Camera, Pencil, Lock, Shield, Award, Sparkles,
+  Camera, Pencil, Lock, Shield, Award, Sparkles, UserCheck, UserPlus,
 } from "lucide-react";
 import { ProfileMotif } from "../../../components/PageBackgroundMotif";
 import AuthDialog from "../../../components/AuthDialog";
@@ -29,6 +29,16 @@ import {
   useProfileByUsernameQuery,
   useUserPostsInfiniteQuery,
 } from "../../exploreFeatures/useExplorePageData";
+import {
+  useProfileEvaluationQuery,
+  useProfileProgressQuery,
+} from "../../rankingFeatures/useRankingData";
+import {
+  useFollowersListQuery,
+  useFollowingListQuery,
+  useFollowStateQuery,
+  useToggleFollowMutation,
+} from "../useProfileSocialData";
 
 const projects = [
   { name: "NeuralDeploy", desc: "One-click ML model deployment. Next.js, Python, Docker.", stars: 412, verified: true, featured: true },
@@ -37,7 +47,7 @@ const projects = [
 ];
 
 const achievements = [
-  { title: "Won AI Challenge — Week 22", desc: "RAG pipeline scoring 94% on domain QA", xp: "+250 XP" },
+  { title: "Won AI Challenge - Week 22", desc: "RAG pipeline scoring 94% on domain QA", xp: "+250 XP" },
   { title: "7-Week Shipping Streak", desc: "Consecutive weekly verified commits", xp: "+90 XP" },
   { title: "Reached Tier 4", desc: "Top 5% of all ranked developers", xp: "+500 XP" },
 ];
@@ -48,21 +58,7 @@ const badges = [
   { label: "7-Week Streak", icon: Flame },
   { label: "Open Source", icon: Github },
   { label: "AI Builder", icon: Zap },
-  { label: "Verified ×3", icon: BadgeCheck },
-];
-
-const monthlyStats = [
-  { label: "Challenges", value: "4", sub: "completed" },
-  { label: "Commits", value: "87", sub: "verified" },
-  { label: "XP Earned", value: "+840", sub: "this month" },
-  { label: "Rank Δ", value: "+12", sub: "positions" },
-];
-
-const allTimeStats = [
-  { label: "Total XP", value: "6,240" },
-  { label: "Challenges Won", value: "9" },
-  { label: "Projects Shipped", value: "12" },
-  { label: "Streak Best", value: "12w" },
+  { label: "Verified x3", icon: BadgeCheck },
 ];
 
 const generateHeatmapData = () => {
@@ -92,26 +88,9 @@ function heatmapColor(level: number): string {
   }
 }
 
-const tiers = [
-  { name: "Aegis", minScore: 2800, color: "from-amber-400 to-ember" },
-  { name: "Tier 5", minScore: 2500, color: "from-ember to-ember-glow" },
-  { name: "Tier 4", minScore: 2200, color: "from-ember/80 to-ember" },
-  { name: "Tier 3", minScore: 1800, color: "from-muted-foreground to-ember/60" },
-  { name: "Tier 2", minScore: 1400, color: "from-muted-foreground/60 to-muted-foreground" },
-  { name: "Tier 1", minScore: 800, color: "from-muted/60 to-muted-foreground/40" },
-  { name: "Unranked", minScore: 0, color: "from-muted/30 to-muted/50" },
-];
-
-const currentScore = 2401;
-const currentTierIndex = tiers.findIndex((t, i) => currentScore >= t.minScore && (i === 0 || currentScore < tiers[i - 1].minScore));
-const nextTier = currentTierIndex > 0 ? tiers[currentTierIndex - 1] : null;
-const progressToNext = nextTier
-  ? ((currentScore - tiers[currentTierIndex].minScore) / (nextTier.minScore - tiers[currentTierIndex].minScore)) * 100
-  : 100;
-
 type ProfileAuthMode = "login" | "signup";
 
-/* ── Edit Profile Dialog ── */
+/* â”€â”€ Edit Profile Dialog â”€â”€ */
 function EditProfileDialog({
   open,
   onOpenChange,
@@ -259,7 +238,7 @@ function EditProfileDialog({
   );
 }
 
-/* ── Profile Page ── */
+/* â”€â”€ Profile Page â”€â”€ */
 const Profile = () => {
   const navigate = useNavigate();
   const { username: routeUsername } = useParams<{ username: string }>();
@@ -288,6 +267,17 @@ const Profile = () => {
     : externalProfileQuery.data?.id ?? null;
 
   const userPostsQuery = useUserPostsInfiniteQuery(authUserId, resolvedUserId);
+  const profileProgressQuery = useProfileProgressQuery(resolvedUserId);
+  const profileEvaluationQuery = useProfileEvaluationQuery(resolvedUserId);
+  const profileProgress = profileProgressQuery.data ?? null;
+  const profileEvaluation = profileEvaluationQuery.data ?? null;
+  const followStateQuery = useFollowStateQuery(
+    authUserId,
+    resolvedUserId,
+    isOwnProfile,
+  );
+  const followMutation = useToggleFollowMutation(authUserId, resolvedUserId);
+
   const userPosts =
     userPostsQuery.data?.pages.flatMap((page) => page.items) ?? [];
   const postsCountLabel =
@@ -373,6 +363,11 @@ const Profile = () => {
   const [authGateMode, setAuthGateMode] = useState<ProfileAuthMode>("login");
   const [bioExpanded, setBioExpanded] = useState(false);
   const [techOpen, setTechOpen] = useState(false);
+  const [followersOpen, setFollowersOpen] = useState(false);
+  const [followingOpen, setFollowingOpen] = useState(false);
+
+  const followersQuery = useFollowersListQuery(resolvedUserId, followersOpen);
+  const followingQuery = useFollowingListQuery(resolvedUserId, followingOpen);
 
   const showGuestGate = !authLoading && !session;
 
@@ -392,9 +387,32 @@ const Profile = () => {
   }, [profile]);
 
   const profileHeadline = "Software Engineer";
-  const profileLocation = "Sarajevo, Bosnia & Herzegovina";
+  const profileLocation = "Global";
   const profileBio =
-    "Full-stack builder. Obsessed with developer tools and AI infra. Shipping every week, proving every day — performance, DX, and taste.";
+    "Full-stack builder. Obsessed with developer tools and AI infra. Shipping every week, proving every day - performance, DX, and taste.";
+  const currentTierName = profileProgress?.tierName ?? "Unranked";
+  const currentScore = profileProgress?.totalScore ?? 0;
+  const currentTierMinScore = profileProgress?.tierMinScore ?? 0;
+  const nextTierName = profileProgress?.nextTierName ?? null;
+  const nextTierMinScore = profileProgress?.nextTierMinScore ?? null;
+  const pointsToNextTier = profileProgress?.pointsToNextTier ?? 0;
+  const progressToNext = profileProgress?.progressToNextTierPct ?? 0;
+  const countryRankLabel = profileProgress?.countryRank ? "Country Rank" : "Region Rank";
+  const globalPercentileLabel = `Top ${Math.max(1, Math.round(profileProgress?.globalPercentile ?? 100))}%`;
+
+  const monthlyStats = [
+    { label: "Posts", value: String(profileProgress?.postsLast30d ?? 0), sub: "last 30 days" },
+    { label: "Weekly Score", value: `+${profileProgress?.weeklyScore ?? 0}`, sub: "this week" },
+    { label: "Challenges", value: String(profileProgress?.challengeWinsCount ?? 0), sub: "won" },
+    { label: "Rank Delta", value: `+${Math.max(0, profileProgress?.weeklyScore ?? 0)}`, sub: "momentum" },
+  ];
+
+  const allTimeStats = [
+    { label: "Total Score", value: Intl.NumberFormat("en-US").format(currentScore) },
+    { label: "Best Streak", value: `${profileProgress?.bestStreakWeeks ?? 0}w` },
+    { label: "Followers", value: Intl.NumberFormat("en-US").format(profileProgress?.followersCount ?? 0) },
+    { label: "Following", value: Intl.NumberFormat("en-US").format(profileProgress?.followingCount ?? 0) },
+  ];
 
   const mutualDevelopers = [
     { name: "Sara K.", username: "sarakdev" },
@@ -419,6 +437,16 @@ const Profile = () => {
       if (prev.length >= 3) return prev;
       return [...prev, t];
     });
+  };
+
+  const handleToggleFollow = () => {
+    if (!authUserId) {
+      setAuthGateMode("login");
+      setAuthGateOpen(true);
+      return;
+    }
+    if (!resolvedUserId || isOwnProfile || followMutation.isPending) return;
+    followMutation.mutate(Boolean(followStateQuery.data?.isFollowing));
   };
 
   return (
@@ -448,7 +476,7 @@ const Profile = () => {
               Sign in to unlock your profile
             </h2>
             <p id="profile-guest-desc" className="text-sm text-muted-foreground leading-relaxed mb-8">
-              Log in or create an account to edit your profile, avatar, and handle — and connect your Tierd. builder identity.
+              Log in or create an account to edit your profile, avatar, and handle - and connect your Tierd. builder identity.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
               <button type="button" className="btn-primary text-sm px-6 py-2.5 w-full sm:w-auto" onClick={() => { setAuthGateMode("login"); setAuthGateOpen(true); }}>
@@ -469,7 +497,7 @@ const Profile = () => {
           animate={{ opacity: 1, y: 0 }}
           className="section-container mt-5 mb-10"
         >
-          {/* Banner — inset, rounded, blends into hero */}
+          {/* Banner â€” inset, rounded, blends into hero */}
           <div className="rounded-2xl border border-border/25 bg-muted/[0.03] overflow-hidden ring-1 ring-border/10">
             <div
               className="relative h-40 sm:h-48"
@@ -494,7 +522,7 @@ const Profile = () => {
             </div>
           </div>
 
-          {/* Row A — identity | rank + next tier */}
+          {/* Row A â€” identity | rank + next tier */}
           <div className="relative z-10 -mt-12 sm:-mt-14">
             <div className="grid lg:grid-cols-[1fr_minmax(280px,340px)] gap-8 lg:gap-10 items-start">
 
@@ -519,18 +547,32 @@ const Profile = () => {
                   {/* Stats + Edit */}
                   <div className="flex flex-1 items-end justify-between gap-4 min-w-0 pb-1">
                     <div className="flex items-center gap-5 sm:gap-7">
-                      {[
-                        { label: "Posts", value: postsCountLabel },
-                        { label: "Following", value: "128" },
-                        { label: "Followers", value: "847" },
-                      ].map((s) => (
-                        <div key={s.label} className="text-center">
-                          <p className="font-display font-bold text-lg leading-tight text-foreground">{s.value}</p>
-                          <p className="text-xs text-muted-foreground/45 uppercase tracking-wider">{s.label}</p>
-                        </div>
-                      ))}
+                      <div className="text-center">
+                        <p className="font-display font-bold text-lg leading-tight text-foreground">{postsCountLabel}</p>
+                        <p className="text-xs text-muted-foreground/45 uppercase tracking-wider">Posts</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setFollowingOpen(true)}
+                        className="text-center transition-opacity hover:opacity-90"
+                      >
+                        <p className="font-display font-bold text-lg leading-tight text-foreground">
+                          {profileProgress?.followingCount ?? 0}
+                        </p>
+                        <p className="text-xs text-muted-foreground/45 uppercase tracking-wider">Following</p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFollowersOpen(true)}
+                        className="text-center transition-opacity hover:opacity-90"
+                      >
+                        <p className="font-display font-bold text-lg leading-tight text-foreground">
+                          {profileProgress?.followersCount ?? 0}
+                        </p>
+                        <p className="text-xs text-muted-foreground/45 uppercase tracking-wider">Followers</p>
+                      </button>
                     </div>
-                    {isOwnProfile && profile && (
+                    {isOwnProfile && profile ? (
                       <button
                         onClick={() => setEditOpen(true)}
                         className="shrink-0 rounded-lg border border-border/30 bg-muted/10 px-4 py-2 text-xs font-medium text-muted-foreground/60 transition-all hover:bg-muted/20 hover:text-foreground hover:border-border/50"
@@ -538,6 +580,27 @@ const Profile = () => {
                       >
                         <Pencil size={13} className="inline mr-1.5 -mt-0.5" />
                         Edit
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleToggleFollow}
+                        disabled={followMutation.isPending}
+                        className="shrink-0 rounded-lg border border-border/30 bg-muted/10 px-4 py-2 text-xs font-medium text-muted-foreground/60 transition-all hover:bg-muted/20 hover:text-foreground hover:border-border/50 disabled:opacity-50"
+                      >
+                        {followMutation.isPending ? (
+                          "Updating..."
+                        ) : followStateQuery.data?.isFollowing ? (
+                          <>
+                            <UserCheck size={13} className="inline mr-1.5 -mt-0.5" />
+                            Following
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus size={13} className="inline mr-1.5 -mt-0.5" />
+                            Follow
+                          </>
+                        )}
                       </button>
                     )}
                   </div>
@@ -619,17 +682,17 @@ const Profile = () => {
                       border: "1px solid hsl(var(--ember) / 0.2)",
                     }}
                   >
-                    <span className="font-display font-bold text-3xl gradient-text">Tier 4</span>
+                    <span className="font-display font-bold text-3xl gradient-text">{currentTierName}</span>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 flex-1">
                   {[
-                    { label: "Score", value: "2,401" },
-                    { label: "Global Rank", value: "#847" },
-                    { label: "Bosnia Rank", value: "#4" },
-                    { label: "This Week", value: "+5" },
-                    { label: "Percentile", value: "Top 5%" },
-                    { label: "Peak Rank", value: "#790" },
+                    { label: "Score", value: Intl.NumberFormat("en-US").format(currentScore) },
+                    { label: "Global Rank", value: profileProgress?.globalRank ? `#${profileProgress.globalRank}` : "-" },
+                    { label: countryRankLabel, value: profileProgress?.countryRank ? `#${profileProgress.countryRank}` : "-" },
+                    { label: "This Week", value: `+${profileProgress?.weeklyScore ?? 0}` },
+                    { label: "Percentile", value: globalPercentileLabel },
+                    { label: "Eval Score", value: profileEvaluation ? Intl.NumberFormat("en-US").format(profileEvaluation.totalScore) : "-" },
                   ].map((s) => (
                     <div key={s.label} className="text-center p-3 rounded-xl bg-muted/6 flex flex-col items-center justify-center">
                       <p className="font-display font-bold text-sm text-foreground">{s.value}</p>
@@ -641,7 +704,7 @@ const Profile = () => {
             </div>
           </div>
 
-          {/* Row B — badges | technologies | monthly + all-time */}
+          {/* Row B â€” badges | technologies | monthly + all-time */}
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -675,13 +738,15 @@ const Profile = () => {
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/45">
                   Technologies
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setTechOpen(true)}
-                  className="text-[11px] font-medium text-ember/65 transition-colors hover:text-ember"
-                >
-                  Edit
-                </button>
+                {isOwnProfile ? (
+                  <button
+                    type="button"
+                    onClick={() => setTechOpen(true)}
+                    className="text-[11px] font-medium text-ember/65 transition-colors hover:text-ember"
+                  >
+                    Edit
+                  </button>
+                ) : null}
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {topTech.map((t) => (
@@ -713,17 +778,17 @@ const Profile = () => {
             <div className="min-w-0 rounded-2xl border border-border/20 bg-muted/4 p-4 lg:p-5">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/40 font-bold">Next Tier</p>
-                {nextTier && (
+                {nextTierName && (
                   <p className="text-[11px] text-muted-foreground/45">
-                    <span className="text-ember font-bold">{nextTier.minScore - currentScore}</span> pts away
+                    <span className="text-ember font-bold">{pointsToNextTier}</span> pts away
                   </p>
                 )}
               </div>
-              {nextTier && (
+              {nextTierName ? (
                 <>
                   <div className="flex items-center justify-between text-xs text-muted-foreground/50 mb-2">
-                    <span className="font-bold text-foreground/70">{tiers[currentTierIndex].name}</span>
-                    <span className="font-bold text-foreground/70">{nextTier.name}</span>
+                    <span className="font-bold text-foreground/70">{currentTierName}</span>
+                    <span className="font-bold text-foreground/70">{nextTierName}</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-muted/15 overflow-hidden">
                     <motion.div
@@ -735,16 +800,18 @@ const Profile = () => {
                     />
                   </div>
                   <div className="flex justify-between text-[10px] text-muted-foreground/35 mt-1.5">
-                    <span>{tiers[currentTierIndex].minScore}</span>
+                    <span>{currentTierMinScore}</span>
                     <span className="text-ember font-bold text-[11px]">{currentScore}</span>
-                    <span>{nextTier.minScore}</span>
+                    <span>{nextTierMinScore ?? "-"}</span>
                   </div>
                 </>
+              ) : (
+                <p className="text-xs text-muted-foreground/55">Top tier reached.</p>
               )}
             </div>
           </motion.div>
 
-          {/* Row C — Monthly+All-time | Activity heatmap */}
+          {/* Row C â€” Monthly+All-time | Activity heatmap */}
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -774,6 +841,19 @@ const Profile = () => {
                     </div>
                   ))}
                 </div>
+                {profileEvaluation?.breakdown?.length ? (
+                  <div className="mt-4 border-t border-border/20 pt-3 space-y-2">
+                    <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/40 font-bold">
+                      Evaluation
+                    </p>
+                    {profileEvaluation.breakdown.map((entry) => (
+                      <div key={entry.source} className="flex items-center justify-between gap-2 text-[10px]">
+                        <span className="text-muted-foreground/60">{entry.source.replaceAll("_", " ")}</span>
+                        <span className="font-semibold text-foreground">+{entry.score}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -781,7 +861,7 @@ const Profile = () => {
             <div className="rounded-2xl border border-border/20 bg-muted/4 p-5">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/40 font-bold flex items-center gap-2">
-                  <TrendingUp size={12} className="text-ember" /> Activity — Last 52 Weeks
+                  <TrendingUp size={12} className="text-ember" /> Activity - Last 52 Weeks
                 </p>
                 <div className="flex items-center gap-1 text-[9px] text-muted-foreground/35">
                   <span>Less</span>
@@ -822,7 +902,7 @@ const Profile = () => {
                   <h2 className="font-display text-lg font-bold tracking-tight text-foreground">Posts</h2>
                   <p className="mt-0.5 text-xs text-muted-foreground/45">
                     {userPostsQuery.hasNextPage
-                      ? `${userPosts.length} shown · more below`
+                      ? `${userPosts.length} shown - more below`
                       : `${userPosts.length} ${userPosts.length === 1 ? "post" : "posts"}`}
                   </p>
                 </div>
@@ -889,7 +969,7 @@ const Profile = () => {
                           onClick={() => void userPostsQuery.fetchNextPage()}
                         >
                           {userPostsQuery.isFetchingNextPage
-                            ? "Loading…"
+                            ? "Loading..."
                             : "Load more posts"}
                         </button>
                       </div>
@@ -938,7 +1018,7 @@ const Profile = () => {
                             <BadgeCheck size={11} /> Verified
                           </span>
                         )}
-                        <span>⭐ {p.stars}</span>
+                        <span>Stars: {p.stars}</span>
                       </div>
                     </div>
                   ))}
@@ -991,18 +1071,100 @@ const Profile = () => {
         />
       )}
 
-      <EditProfileDialog
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        onSaved={({ username }) => {
-          const cleanNext = username?.trim().toLowerCase().replace(/^@/, "");
-          const cleanRoute = routeUsername?.trim().toLowerCase().replace(/^@/, "");
-          if (!cleanNext) return;
-          if (cleanRoute !== cleanNext) {
-            navigate(`/profile/${cleanNext}`, { replace: true });
-          }
-        }}
-      />
+      {isOwnProfile ? (
+        <EditProfileDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          onSaved={({ username }) => {
+            const cleanNext = username?.trim().toLowerCase().replace(/^@/, "");
+            const cleanRoute = routeUsername?.trim().toLowerCase().replace(/^@/, "");
+            if (!cleanNext) return;
+            if (cleanRoute !== cleanNext) {
+              navigate(`/profile/${cleanNext}`, { replace: true });
+            }
+          }}
+        />
+      ) : null}
+
+      <Dialog open={followersOpen} onOpenChange={setFollowersOpen}>
+        <DialogContent className="glass-surface max-w-[480px] border-border/60">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl font-bold tracking-tight">Followers</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Profiles that follow @{displayUsername}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[55vh] overflow-y-auto space-y-2">
+            {followersQuery.isPending ? (
+              <p className="text-sm text-muted-foreground/70">Loading followers...</p>
+            ) : (followersQuery.data ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground/70">No followers yet.</p>
+            ) : (
+              (followersQuery.data ?? []).map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    setFollowersOpen(false);
+                    navigate(`/profile/${item.username ?? item.id}`);
+                  }}
+                  className="w-full flex items-center gap-3 rounded-lg border border-border/30 bg-muted/10 px-3 py-2 text-left hover:bg-muted/20"
+                >
+                  <Avatar className="h-9 w-9">
+                    {item.avatar_url ? <AvatarImage src={item.avatar_url} alt={item.full_name ?? "User"} /> : null}
+                    <AvatarFallback>{(item.full_name ?? item.username ?? "U").charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{item.full_name ?? item.username ?? "User"}</p>
+                    <p className="text-xs text-muted-foreground/65 truncate">@{item.username ?? item.id.slice(0, 8)}</p>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={followingOpen} onOpenChange={setFollowingOpen}>
+        <DialogContent className="glass-surface max-w-[480px] border-border/60">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl font-bold tracking-tight">Following</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Profiles followed by @{displayUsername}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[55vh] overflow-y-auto space-y-2">
+            {followingQuery.isPending ? (
+              <p className="text-sm text-muted-foreground/70">Loading following...</p>
+            ) : (followingQuery.data ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground/70">Not following anyone yet.</p>
+            ) : (
+              (followingQuery.data ?? []).map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    setFollowingOpen(false);
+                    navigate(`/profile/${item.username ?? item.id}`);
+                  }}
+                  className="w-full flex items-center gap-3 rounded-lg border border-border/30 bg-muted/10 px-3 py-2 text-left hover:bg-muted/20"
+                >
+                  <Avatar className="h-9 w-9">
+                    {item.avatar_url ? <AvatarImage src={item.avatar_url} alt={item.full_name ?? "User"} /> : null}
+                    <AvatarFallback>{(item.full_name ?? item.username ?? "U").charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{item.full_name ?? item.username ?? "User"}</p>
+                    <p className="text-xs text-muted-foreground/65 truncate">@{item.username ?? item.id.slice(0, 8)}</p>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {isOwnProfile ? (
       <Dialog open={techOpen} onOpenChange={setTechOpen}>
         <DialogContent className="glass-surface max-w-[520px] border-border/60">
           <DialogHeader>
@@ -1010,7 +1172,7 @@ const Profile = () => {
               Technologies
             </DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              Pick your top 2–3 technologies (highlighted). You can adjust this later.
+              Pick your top 2-3 technologies (highlighted). You can adjust this later.
             </DialogDescription>
           </DialogHeader>
 
@@ -1048,6 +1210,7 @@ const Profile = () => {
           </div>
         </DialogContent>
       </Dialog>
+      ) : null}
       <AuthDialog
         open={authGateOpen}
         onOpenChange={setAuthGateOpen}

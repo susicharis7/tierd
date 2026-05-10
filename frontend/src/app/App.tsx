@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "../components/ui/sonner";
 import { Toaster } from "../components/ui/toaster";
 import { TooltipProvider } from "../components/ui/tooltip";
 import { AuthProvider } from "../features/authFeatures/AuthProvider";
+import { useRankingRealtimeSync } from "../features/rankingFeatures/useRankingRealtimeSync";
 import IndexPage from "../pages/IndexPage";
 import ExplorePage from "../pages/ExplorePage";
 import LeaderboardPage from "../pages/LeaderboardPage";
@@ -21,9 +22,15 @@ const queryClient = new QueryClient({
   },
 });
 
+function RankingRealtimeBridge() {
+  useRankingRealtimeSync();
+  return null;
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <RankingRealtimeBridge />
       <AuthProvider>
         <TooltipProvider>
           <Toaster />

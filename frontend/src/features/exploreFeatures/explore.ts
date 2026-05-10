@@ -1,4 +1,6 @@
 import { isSupabaseConfigured, supabase } from "../../lib/supabase";
+import { storageRepository } from "../../repositories/storageRepository";
+import { postService } from "../../services/postService";
 import type { ExploreProfile, FeedPost, PaginatedResult, PostComment } from "./exploreTypes";
 import { logExploreDevError, warnExploreProfilesMissingForAuthors } from "./exploreErrors";
 
@@ -309,20 +311,12 @@ export async function uploadFeedImage(userId: string, file: File): Promise<strin
     });
   }
 
-  const ext = file.name.split(".").pop() ?? "png";
-  const path = `${userId}/${Date.now()}.${ext}`;
-
-  const { error: uploadError } = await supabase.storage.from("feed-images").upload(path, file, {
-    upsert: false,
-  });
-
-  if (uploadError) {
+  try {
+    return await storageRepository.uploadFeedImage(userId, file);
+  } catch (uploadError) {
     logExploreDevError("uploadFeedImage (feed-images bucket)", uploadError);
     throw uploadError;
   }
-
-  const { data } = supabase.storage.from("feed-images").getPublicUrl(path);
-  return data.publicUrl;
 }
 
 export async function createPost(params: {
@@ -331,23 +325,14 @@ export async function createPost(params: {
   imageFile?: File | null;
 }): Promise<void> {
   if (!isSupabaseConfigured) return;
-
-  const trimmed = params.content.trim();
-  if (!trimmed) return;
-
-  let imageUrl: string | null = null;
-  if (params.imageFile) {
-    imageUrl = await uploadFeedImage(params.userId, params.imageFile);
-  }
-
-  const { error } = await supabase.from("posts").insert({
-    user_id: params.userId,
-    content: trimmed,
-    image_url: imageUrl,
-  });
-
-  if (error) {
-    logExploreDevError("createPost (posts insert)", error);
+  try {
+    await postService.createPost({
+      userId: params.userId,
+      content: params.content,
+      imageFile: params.imageFile,
+    });
+  } catch (error) {
+    logExploreDevError("createPost (postService)", error);
     throw error;
   }
 }

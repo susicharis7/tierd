@@ -848,7 +848,7 @@ const Profile = () => {
                     </p>
                     {profileEvaluation.breakdown.map((entry) => (
                       <div key={entry.source} className="flex items-center justify-between gap-2 text-[10px]">
-                        <span className="text-muted-foreground/60">{entry.source.replaceAll("_", " ")}</span>
+                        <span className="text-muted-foreground/60">{entry.source.replace("_", " ")}</span>
                         <span className="font-semibold text-foreground">+{entry.score}</span>
                       </div>
                     ))}

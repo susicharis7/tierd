@@ -35,6 +35,7 @@ import type {
 } from "./exploreTypes";
 import { FEED_PAGE_SIZE } from "./exploreUiConstants";
 import { toast } from "../../components/ui/sonner";
+import { invalidateRankingQueries } from "../rankingFeatures/rankingCache";
 
 export type ExploreFeedInfiniteData = InfiniteData<PaginatedResult<FeedPost>>;
 export type UserPostsInfiniteData = PostsInfiniteData;
@@ -167,6 +168,7 @@ export function useExploreLikeMutation(
       void queryClient.invalidateQueries({
         predicate: (q) => isUserPostsQueryKey(q.queryKey),
       });
+      void invalidateRankingQueries(queryClient);
     },
   });
 }
@@ -291,6 +293,7 @@ export function useExploreAddCommentMutation(
       void queryClient.invalidateQueries({
         predicate: (q) => isUserPostsQueryKey(q.queryKey),
       });
+      void invalidateRankingQueries(queryClient);
     },
   });
 }
@@ -348,6 +351,7 @@ export function useExploreCreatePostMutation(userId: string | null) {
             isUserPostsQueryKey(q.queryKey) && q.queryKey[2] === userId,
         });
       }
+      void invalidateRankingQueries(queryClient);
     },
     onError: (err) => {
       const msg = err instanceof Error ? err.message : "Failed to post.";

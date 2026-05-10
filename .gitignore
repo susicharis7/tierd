@@ -50,3 +50,7 @@ temp/
 .idea/
 .DS_Store
 Thumbs.db
+
+RELEASE_ROADMAP.md
+supabase/.temp
+supabase/live-dump

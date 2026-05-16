@@ -178,9 +178,9 @@ const LeaderboardPageContent = () => {
 
         {hasPodium && (
           <div className="grid grid-cols-1 md:grid-cols-[1fr_1.15fr_1fr] gap-4 items-end mb-28">
-            <PodiumCard dev={top3[1]} place={2} isYou={top3[1].profileId === userId} />
-            <PodiumCard dev={top3[0]} place={1} isYou={top3[0].profileId === userId} />
-            <PodiumCard dev={top3[2]} place={3} isYou={top3[2].profileId === userId} />
+            <PodiumSlot dev={top3[1]} place={2} isYou={top3[1].profileId === userId} />
+            <PodiumSlot dev={top3[0]} place={1} isYou={top3[0].profileId === userId} />
+            <PodiumSlot dev={top3[2]} place={3} isYou={top3[2].profileId === userId} />
           </div>
         )}
 
@@ -293,8 +293,8 @@ function PodiumCard({
       padding="md"
       radius="xl"
       className={cn(
-        "h-[230px] flex flex-col justify-between overflow-hidden",
-        isFirst && "h-[260px] -translate-y-[30px] shadow-glow-orange",
+        "h-[200px] flex flex-col justify-between overflow-hidden",
+        isFirst && "h-[230px] shadow-glow-orange",
       )}
     >
       <Tape
@@ -369,27 +369,39 @@ function PodiumCard({
           @{dev.username} · TIER {tier === "—" ? "—" : tier.slice(1)}
           {isFirst && dev.streakWeeks > 0 && ` · STREAK ${dev.streakWeeks}w`}
         </div>
-        <div className="flex justify-between items-baseline mt-3">
-          <div
-            className={cn(
-              "font-boldonse",
-              isFirst ? "text-[32px] text-cream" : place === 2 ? "text-[28px] text-orange" : "text-[26px] text-orange",
-            )}
-          >
-            {dev.score.toLocaleString()}
-          </div>
-          <div
-            className={cn(
-              "font-mono-jb font-bold",
-              isFirst ? "text-[12px] text-cream" : "text-[11px] text-forest",
-            )}
-          >
-            {dev.delta >= 0 ? "↑" : "↓"} {dev.delta >= 0 ? "+" : ""}
-            {dev.delta}
-          </div>
-        </div>
       </div>
     </Sticker>
+  );
+}
+
+function PodiumSlot({
+  dev,
+  place,
+  isYou,
+}: {
+  dev: LeaderboardEntry;
+  place: 1 | 2 | 3;
+  isYou: boolean;
+}) {
+  const isFirst = place === 1;
+  return (
+    <div className={cn(isFirst && "-translate-y-[30px]")}>
+      <PodiumCard dev={dev} place={place} isYou={isYou} />
+      <div className="text-center mt-5">
+        <div
+          className={cn(
+            "font-boldonse leading-[0.9]",
+            isFirst ? "text-[44px] text-orange" : "text-[34px] text-cream",
+          )}
+        >
+          {dev.score.toLocaleString()}
+        </div>
+        <div className="font-mono-jb font-bold text-[12px] text-forest mt-1.5">
+          {dev.delta >= 0 ? "↑" : "↓"} {dev.delta >= 0 ? "+" : ""}
+          {dev.delta}
+        </div>
+      </div>
+    </div>
   );
 }
 

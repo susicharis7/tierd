@@ -15,6 +15,40 @@ import {
   logout as doLogout,
   onAuthStateChange,
 } from "./auth";
+import { findStrategyBySupabaseProvider } from "../../strategies/auth";
+import { externalAccountRepository } from "../../repositories/externalAccountRepository";
+import { oauthTokenRepository } from "../../repositories/oauthTokenRepository";
+
+async function persistOAuthIdentity(session: Session) {
+  const supabaseProvider = session.user.app_metadata?.provider;
+  const strategy = findStrategyBySupabaseProvider(supabaseProvider);
+  if (!strategy) return;
+
+  const identity = strategy.extractIdentity(session);
+  if (!identity) return;
+
+  try {
+    await externalAccountRepository.upsertFromOAuth(session.user.id, identity);
+  } catch (err) {
+    console.error("[AuthProvider] external account upsert failed", err);
+  }
+
+  // provider_token is only present on the initial OAuth callback session;
+  // page reloads restore the session without it.
+  if (session.provider_token) {
+    try {
+      await oauthTokenRepository.upsert({
+        profileId: session.user.id,
+        provider: identity.provider,
+        accessToken: session.provider_token,
+        refreshToken: session.provider_refresh_token ?? null,
+        scopes: strategy.scopes,
+      });
+    } catch (err) {
+      console.error("[AuthProvider] oauth token persist failed", err);
+    }
+  }
+}
 
 interface AuthContextValue {
   session: Session | null;
@@ -91,6 +125,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setSession(sess);
       void syncProfile(sess?.user?.id ?? null);
+
+      if (event === "SIGNED_IN" && sess) {
+        void persistOAuthIdentity(sess);
+      }
     });
 
     return () => {

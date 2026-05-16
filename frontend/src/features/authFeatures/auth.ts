@@ -1,5 +1,6 @@
 ﻿import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { isSupabaseConfigured, supabase } from "../../lib/supabase";
+import type { AuthProviderStrategy } from "../../strategies/auth";
 import type { LoginInput, ProfileRow, RegisterInput } from "./authTypes";
 
 const DEBUG_AUTH = true;
@@ -52,6 +53,22 @@ export async function login(logInput: LoginInput) {
 
   if (error) throw error;
   return data;
+}
+
+export async function signInWithOAuthStrategy(strategy: AuthProviderStrategy) {
+  if (!isSupabaseConfigured) throw new Error(NOT_CONFIGURED_MSG);
+  authLog("oauth:start", { provider: strategy.supabaseProvider });
+
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: strategy.supabaseProvider,
+    options: {
+      scopes: strategy.scopes,
+      redirectTo: window.location.origin,
+    },
+  });
+
+  authLog("oauth:redirect", { error });
+  if (error) throw error;
 }
 
 export async function logout() {

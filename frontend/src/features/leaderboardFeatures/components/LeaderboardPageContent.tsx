@@ -177,7 +177,7 @@ const LeaderboardPageContent = () => {
         </div>
 
         {hasPodium && (
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_1.15fr_1fr] gap-4 items-end mb-16">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1.15fr_1fr] gap-4 items-end mb-28">
             <PodiumCard dev={top3[1]} place={2} isYou={top3[1].profileId === userId} />
             <PodiumCard dev={top3[0]} place={1} isYou={top3[0].profileId === userId} />
             <PodiumCard dev={top3[2]} place={3} isYou={top3[2].profileId === userId} />
@@ -372,7 +372,7 @@ function PodiumCard({
           <div
             className={cn(
               "font-boldonse",
-              isFirst ? "text-[32px] text-cream" : place === 2 ? "text-[24px] text-ink" : "text-[22px] text-ink",
+              isFirst ? "text-[32px] text-cream" : place === 2 ? "text-[28px] text-orange" : "text-[26px] text-orange",
             )}
           >
             {dev.score.toLocaleString()}

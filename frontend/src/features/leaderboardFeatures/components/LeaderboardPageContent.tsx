@@ -10,12 +10,12 @@ import type { LeaderboardEntry } from "../../../services/rankingService";
 
 import {
   Doodle,
-  DoodleAvatar,
   MonoCaption,
   Sticker,
   StickerBadge,
   Tape,
   TierBadge,
+  UserAvatar,
   type Tier,
 } from "../../../components/tierd";
 import { cn } from "../../../lib/utils";
@@ -293,8 +293,8 @@ function PodiumCard({
       padding="md"
       radius="xl"
       className={cn(
-        "h-[200px] flex flex-col justify-between",
-        isFirst && "h-[230px] -translate-y-[30px] shadow-glow-orange",
+        "h-[230px] flex flex-col justify-between overflow-hidden",
+        isFirst && "h-[260px] -translate-y-[30px] shadow-glow-orange",
       )}
     >
       <Tape
@@ -338,35 +338,36 @@ function PodiumCard({
         </span>
       </div>
 
-      <div>
-        <DoodleAvatar
+      <div className="min-w-0">
+        <UserAvatar
           name={dev.fullName || dev.username || "U"}
+          src={dev.avatarUrl}
           size={isFirst ? 52 : 44}
           className="mb-2.5"
         />
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 min-w-0">
           <div
             className={cn(
-              "font-grot font-extrabold",
+              "font-grot font-extrabold truncate min-w-0",
               isFirst ? "text-[22px] text-cream" : "text-[17px] text-ink",
             )}
           >
             {dev.fullName || dev.username}
           </div>
           {isYou && (
-            <span className="rounded-[4px] bg-orange text-cream font-mono-jb text-[8px] font-bold px-1.5 py-px">
+            <span className="shrink-0 rounded-[4px] bg-orange text-cream font-mono-jb text-[8px] font-bold px-1.5 py-px">
               YOU
             </span>
           )}
         </div>
         <div
           className={cn(
-            "font-mono-jb text-[10px] uppercase tracking-[0.08em] mt-1",
+            "font-mono-jb text-[10px] uppercase tracking-[0.08em] mt-1 truncate",
             isFirst ? "text-cream/80" : "text-muted-cream",
           )}
         >
           @{dev.username} · TIER {tier === "—" ? "—" : tier.slice(1)}
-          {dev.streakWeeks > 0 && ` · STREAK ${dev.streakWeeks}w`}
+          {isFirst && dev.streakWeeks > 0 && ` · STREAK ${dev.streakWeeks}w`}
         </div>
         <div className="flex justify-between items-baseline mt-3">
           <div
@@ -431,10 +432,10 @@ function LeaderboardRow({
 
       {/* Developer */}
       <div className="flex items-center gap-3.5 min-w-0">
-        <DoodleAvatar
+        <UserAvatar
           name={dev.fullName || dev.username || "U"}
+          src={dev.avatarUrl}
           size={40}
-          className="shrink-0"
         />
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">

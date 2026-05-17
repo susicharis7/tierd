@@ -1,75 +1,149 @@
 import { Link } from "react-router-dom";
-import { Activity, Code2, Heart, Lock, MessageSquare, UserPlus, Users } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar";
+
+import {
+  Doodle,
+  MonoCaption,
+  Sticker,
+  Tape,
+  UserAvatar,
+} from "../../../components/tierd";
 import { toast } from "../../../components/ui/sonner";
+import { cn } from "../../../lib/utils";
+import { useProfileProgressQuery } from "../../rankingFeatures/useRankingData";
 import { myCommunities, recentActivity } from "../constants/exploreUIData";
 
+const COMMUNITY_ACCENTS = [
+  "bg-orange",
+  "bg-plum",
+  "bg-forest",
+  "bg-orange-2",
+] as const;
 
-export function MiniProfileCard({ profile, userId }: { profile: { full_name: string | null; username: string | null; avatar_url: string | null } | null; userId: string | null }) {
-  const ini = (profile?.full_name || profile?.username || "U").charAt(0).toUpperCase();
+export function MiniProfileCard({
+  profile,
+  userId,
+}: {
+  profile: {
+    full_name: string | null;
+    username: string | null;
+    avatar_url: string | null;
+  } | null;
+  userId: string | null;
+}) {
+  // Pull live stats (followers/following/score) for the signed-in user.
+  // Falls back to graceful zeros while loading.
+  const progressQuery = useProfileProgressQuery(userId);
+  const progress = progressQuery.data;
+
   const name = profile?.full_name?.trim() || "Your Name";
-  const handle = profile?.username?.trim() ? `@${profile.username}` : "@handle";
+  const handle = profile?.username?.trim()
+    ? `@${profile.username}`
+    : "@handle";
+  const profileHref = `/profile/${profile?.username ?? userId}`;
 
   return (
-    <div className="rounded-2xl border border-border/20 bg-muted/4 overflow-hidden">
-      {/* Mini banner */}
-      <div
-        className="h-16 relative"
-        style={{
-          background: "radial-gradient(500px 120px at 50% 80%, hsl(var(--ember) / 0.2), transparent 60%), linear-gradient(180deg, hsl(var(--glass) / 0.8) 0%, hsl(var(--background) / 0.4) 100%)",
-        }}
-      />
-      <div className="px-4 pb-4 -mt-7">
-        <Link to={userId ? `/profile/${profile?.username ?? userId}` : "/profile/me"}>
-          <Avatar className="h-14 w-14 ring-[3px] ring-[hsl(var(--background))] shadow-lg mb-2">
-            {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={name} />}
-            <AvatarFallback
-              className="font-display text-lg font-bold text-ember"
-              style={{ background: "linear-gradient(135deg, hsl(var(--ember) / 0.2), hsl(var(--ember-glow) / 0.1))" }}
-            >
-              {ini}
-            </AvatarFallback>
-          </Avatar>
+    <Sticker
+      color="cream"
+      tilt={-1}
+      padding="lg"
+      radius="lg"
+      className="relative"
+    >
+      <Tape color="tape" size="md" tilt={-6} className="-top-[10px] left-14" />
+
+      <div className="flex items-center gap-3.5 mb-4">
+        <Link to={profileHref}>
+          <UserAvatar name={name} src={profile?.avatar_url} size={56} />
         </Link>
-        <Link to={userId ? `/profile/${profile?.username ?? userId}` : "/profile/me"} className="block group">
-          <p className="font-display font-bold text-sm text-foreground truncate group-hover:text-ember transition-colors">{name}</p>
-          <p className="text-xs text-muted-foreground/50 truncate">{handle}</p>
-        </Link>
-        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border/15">
-          <div>
-            <p className="font-display font-bold text-sm text-foreground">128</p>
-            <p className="text-[10px] text-muted-foreground/40 uppercase tracking-wider">Following</p>
-          </div>
-          <div>
-            <p className="font-display font-bold text-sm text-foreground">847</p>
-            <p className="text-[10px] text-muted-foreground/40 uppercase tracking-wider">Followers</p>
-          </div>
+        <div className="min-w-0">
+          <Link to={profileHref}>
+            <p className="font-grot font-extrabold text-[18px] text-ink truncate hover:text-orange transition-colors">
+              {name}
+            </p>
+          </Link>
+          <p className="font-mono-jb text-[11px] uppercase tracking-[0.08em] text-muted-cream mt-1 truncate">
+            {handle}
+          </p>
         </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        <StatCell
+          value={progress?.followingCount ?? 0}
+          label="following"
+        />
+        <StatCell
+          value={progress?.followersCount ?? 0}
+          label="followers"
+        />
+        <StatCell
+          value={progress?.totalScore ?? 0}
+          label="score"
+          accent
+        />
+      </div>
+
+      <div className="flex gap-2">
         <Link
-          to="/profile/me"
-          className="mt-3 block w-full text-center rounded-lg border border-border/30 bg-muted/10 py-2 text-xs font-medium text-foreground/70 transition-all hover:bg-muted/20 hover:text-foreground hover:border-border/50"
+          to={profileHref}
+          className="flex-1 text-center rounded-[10px] bg-ink text-cream font-mono-jb font-bold text-[12px] px-3 py-2.5 shadow-press hover:translate-y-px transition-transform"
         >
-          My Profile
+          my profile →
         </Link>
+        <button
+          type="button"
+          className="rounded-[10px] border-[1.5px] border-ink text-ink font-mono-jb font-bold text-[12px] px-3 py-2.5 hover:bg-ink/5 transition-colors"
+          aria-label="More"
+        >
+          <Doodle.Asterisk size={14} className="text-ink" />
+        </button>
+      </div>
+    </Sticker>
+  );
+}
+
+function StatCell({
+  value,
+  label,
+  accent,
+}: {
+  value: number;
+  label: string;
+  accent?: boolean;
+}) {
+  return (
+    <div className="text-left">
+      <div
+        className={cn(
+          "font-grot font-extrabold text-[18px] leading-none",
+          accent ? "text-orange" : "text-ink",
+        )}
+      >
+        {value.toLocaleString()}
+      </div>
+      <div className="font-mono-jb text-[10px] uppercase tracking-[0.06em] text-muted-cream mt-1">
+        {label}
       </div>
     </div>
   );
-};
+}
 
 export function CommunitiesPanel({ isLoggedIn }: { isLoggedIn: boolean }) {
   if (!isLoggedIn) {
     return (
-      <div className="rounded-2xl border border-border/20 bg-muted/4 p-4 text-center">
-        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-muted/15">
-          <Lock size={16} className="text-muted-foreground/40" />
+      <div className="rounded-[14px] border border-dashed border-cream/20 bg-cream/[0.03] p-5 text-center">
+        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-cream/10">
+          <Doodle.CodeBracket size={16} className="text-cream/40" />
         </div>
-        <p className="font-display text-xs font-bold text-foreground/70 mb-1">Communities</p>
-        <p className="text-xs text-muted-foreground/45 mb-3 leading-relaxed">
+        <MonoCaption tone="cream" className="mb-1.5">
+          // communities
+        </MonoCaption>
+        <p className="font-mono-jb text-[11px] text-muted-ink mb-3 leading-[1.6]">
           Log in to discover developer communities.
         </p>
         <button
           type="button"
-          className="w-full rounded-lg border border-ember/15 bg-ember/5 py-2 text-xs font-medium text-ember/80 transition-all hover:bg-ember/10"
+          className="w-full rounded-[10px] border border-orange/25 bg-orange/[0.08] py-2 font-mono-jb text-[12px] font-bold text-orange transition-colors hover:bg-orange/15"
           onClick={() => toast("Use the Log in button in the top-right.")}
         >
           Sign in
@@ -79,51 +153,71 @@ export function CommunitiesPanel({ isLoggedIn }: { isLoggedIn: boolean }) {
   }
 
   return (
-    <div className="rounded-2xl border border-border/20 bg-muted/4 p-4">
-      <h3 className="mb-3 flex items-center gap-2 font-display text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground/55">
-        <Code2 size={12} className="text-ember" /> Communities
-      </h3>
-      <div className="space-y-2">
-        {myCommunities.map((c) => (
+    <div>
+      <div className="flex items-center gap-2.5 mb-3.5">
+        <Doodle.CodeBracket size={14} className="text-orange" />
+        <MonoCaption tone="cream">// communities</MonoCaption>
+        <div className="flex-1 h-px bg-cream/10" />
+        <MonoCaption tone="cream" className="text-cream">
+          {myCommunities.length}
+        </MonoCaption>
+      </div>
+      <div className="flex flex-col gap-2">
+        {myCommunities.map((c, i) => (
           <div
             key={c.name}
-            className="flex items-center gap-3 rounded-xl p-2.5 transition-all hover:bg-muted/10 group cursor-pointer"
+            className="flex items-center justify-between px-3.5 py-3 rounded-xl bg-cream/[0.04] border border-cream/[0.08] group cursor-pointer hover:border-cream/20 transition-colors"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-ember/8 shrink-0">
-              <Users size={13} className="text-ember/70" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-foreground/80 truncate group-hover:text-foreground transition-colors">
-                {c.name}
-              </p>
-              <p className="text-xs text-muted-foreground/45">
-                {c.members.toLocaleString()} members
-                {c.active && (
-                  <span className="ml-1.5 inline-flex items-center gap-0.5 text-emerald-400/70">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/70" /> active
-                  </span>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div
+                className={cn(
+                  "w-7 h-7 rounded-lg flex items-center justify-center text-cream font-boldonse text-[13px] shrink-0",
+                  COMMUNITY_ACCENTS[i % COMMUNITY_ACCENTS.length],
                 )}
-              </p>
+              >
+                {c.name[0]}
+              </div>
+              <div className="min-w-0">
+                <p className="font-mono-jb text-[12px] font-semibold text-cream truncate">
+                  {c.name}
+                </p>
+                <p className="font-mono-jb text-[9px] uppercase tracking-[0.1em] text-muted-ink mt-0.5">
+                  <span className={c.active ? "text-forest" : "text-tape"}>●</span>{" "}
+                  {c.members.toLocaleString()} members
+                </p>
+              </div>
             </div>
+            <Doodle.Plus size={11} className="text-cream/50" />
           </div>
         ))}
       </div>
-      <button className="mt-3 w-full rounded-lg border border-border/20 bg-muted/8 py-2 text-xs font-medium text-muted-foreground/50 transition-all hover:bg-muted/15 hover:text-foreground/70">
-        Discover communities
-      </button>
     </div>
   );
 }
 
+const ACTIVITY_ICONS: Record<string, string> = {
+  follow: "+",
+  like: "♥",
+  comment: "\"",
+};
+
+const ACTIVITY_BORDER: Record<string, string> = {
+  follow: "border-forest",
+  like: "border-orange",
+  comment: "border-orange-2",
+};
+
 export function ActivityPanel({ isLoggedIn }: { isLoggedIn: boolean }) {
   if (!isLoggedIn) {
     return (
-      <div className="rounded-2xl border border-border/20 bg-muted/4 p-4 text-center">
-        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-muted/15">
-          <Activity size={16} className="text-muted-foreground/40" />
+      <div className="rounded-[14px] border border-dashed border-cream/20 bg-cream/[0.03] p-5 text-center">
+        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-cream/10">
+          <Doodle.Pulse size={16} className="text-cream/40" />
         </div>
-        <p className="font-display text-xs font-bold text-foreground/70 mb-1">Activity</p>
-        <p className="text-xs text-muted-foreground/45 leading-relaxed">
+        <MonoCaption tone="cream" className="mb-1.5">
+          // activity
+        </MonoCaption>
+        <p className="font-mono-jb text-[11px] text-muted-ink leading-[1.6]">
           Sign in to see what builders are up to.
         </p>
       </div>
@@ -131,34 +225,43 @@ export function ActivityPanel({ isLoggedIn }: { isLoggedIn: boolean }) {
   }
 
   return (
-    <div className="rounded-2xl border border-border/20 bg-muted/4 p-4">
-      <h3 className="mb-3 flex items-center gap-2 font-display text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground/55">
-        <Activity size={12} className="text-ember" /> Recent Activity
-      </h3>
-      <div className="space-y-1">
-        {recentActivity.map((a, i) => (
-          <div
-            key={i}
-            className="flex items-start gap-2.5 rounded-xl p-2.5 transition-all hover:bg-muted/10"
-          >
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted/15 shrink-0 mt-0.5">
-              {a.type === "follow" ? (
-                <UserPlus size={12} className="text-ember/60" />
-              ) : a.type === "like" ? (
-                <Heart size={12} className="text-ember/60" />
-              ) : (
-                <MessageSquare size={12} className="text-ember/60" />
+    <div>
+      <div className="flex items-center gap-2.5 mb-3.5">
+        <Doodle.Pulse size={14} className="text-orange" />
+        <MonoCaption tone="cream">// activity</MonoCaption>
+        <div className="flex-1 h-px bg-cream/10" />
+      </div>
+      <div className="rounded-[14px] bg-cream/[0.04] border border-cream/[0.08] p-1.5">
+        {recentActivity.map((a, i) => {
+          const isLast = i === recentActivity.length - 1;
+          return (
+            <div
+              key={`${a.user}-${i}`}
+              className={cn(
+                "flex gap-2.5 px-3 py-3 items-start",
+                !isLast && "border-b border-dashed border-cream/[0.08]",
               )}
+            >
+              <div
+                className={cn(
+                  "w-7 h-7 rounded-lg bg-orange/15 flex items-center justify-center text-cream text-[13px] shrink-0 border",
+                  ACTIVITY_BORDER[a.type] ?? "border-orange",
+                )}
+              >
+                {ACTIVITY_ICONS[a.type] ?? "↑"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-mono-jb text-[12px] text-cream leading-[1.4]">
+                  <b className="font-bold">{a.user}</b>{" "}
+                  <span className="text-muted-ink">{a.action}</span>
+                </p>
+                <p className="font-mono-jb text-[9px] uppercase tracking-[0.1em] text-muted-ink mt-1">
+                  {a.time}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs text-foreground/75 leading-relaxed">
-                <span className="font-semibold text-foreground">{a.user}</span>{" "}
-                {a.action}
-              </p>
-              <p className="text-xs text-ember/50 font-medium">{a.time}</p>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

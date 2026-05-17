@@ -1,6 +1,7 @@
-﻿import Navbar from "../components/Navbar";
+import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { ExploreHeader } from "../features/exploreFeatures/components/ExploreHeader";
+import { ExploreSearchBar } from "../features/exploreFeatures/components/ExploreSearchBar";
 import { ExploreSearchResults } from "../features/exploreFeatures/components/ExploreSearchResults";
 import { ExploreRightSidebar } from "../features/exploreFeatures/components/ExploreRightSidebar";
 import { ExploreLeftSidebar } from "../features/exploreFeatures/components/ExploreLeftSidebar";
@@ -47,19 +48,22 @@ const Explore = () => {
   } = useExplorePageController();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-ink text-cream font-grot relative">
       <Navbar />
 
       <ExploreHeader
         showSearchResults={showSearchResults}
         profilesCount={profiles.length}
         postsCount={posts.length}
+      />
+
+      <ExploreSearchBar
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
         searchLoading={searchLoading}
       />
 
-      <div className="section-container pt-4 pb-16">
+      <div className="section-container pt-6 pb-16">
         {showSearchResults && (
           <ExploreSearchResults
             searchLoading={searchLoading}
@@ -69,7 +73,7 @@ const Explore = () => {
         )}
 
         {!showSearchResults && (
-          <div className="grid lg:grid-cols-[220px_1fr_260px] gap-6 items-start">
+          <div className="grid lg:grid-cols-[280px_1fr_280px] gap-6 items-start">
             <ExploreLeftSidebar
               userId={userId}
               authLoading={authLoading}

@@ -2,13 +2,13 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Heart, MessageSquare, Image as ImageIcon } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
+
+import { Doodle, UserAvatar } from "../../components/tierd";
 import { Textarea } from "../../components/ui/textarea";
-import { timeAgo } from "../../lib/utils";
+import { cn, timeAgo } from "../../lib/utils";
 import {
   authorDisplayName,
   authorHandleStr,
-  authorInitial,
 } from "./exploreAuthorDisplay";
 import type { FeedPost, PostComment } from "./exploreTypes";
 import { FEED_POST_PREVIEW_CHARS } from "./exploreUiConstants";
@@ -48,6 +48,7 @@ export function ExplorePostCard({
       ? post.content.slice(0, FEED_POST_PREVIEW_CHARS).trimEnd()
       : post.content;
 
+  const authorName = authorDisplayName(post.author);
   const profilePath = `/profile/${post.author.username ?? post.author.id}`;
 
   return (
@@ -57,204 +58,204 @@ export function ExplorePostCard({
       transition={{ delay: index * 0.025, duration: 0.35 }}
       className="group relative"
     >
-      <div className="absolute left-0 top-4 bottom-4 w-px rounded-full bg-ember/0 group-hover:bg-ember/20 transition-all duration-300" />
+      <div className="relative px-6 py-6 transition-colors hover:bg-cream/[0.02]">
+        {/* Decorative corner brackets */}
+        <Doodle.CornerBracket
+          size={18}
+          corner="tl"
+          className="absolute top-3 left-3 text-orange/60 pointer-events-none hidden sm:block"
+          aria-hidden
+        />
+        <Doodle.CornerBracket
+          size={18}
+          corner="tr"
+          className="absolute top-3 right-3 text-orange/60 pointer-events-none hidden sm:block"
+          aria-hidden
+        />
 
-      <div className="flex gap-3.5 px-5 py-5 transition-colors hover:bg-muted/[0.04] sm:px-5">
-        <div className="shrink-0 pt-0.5">
-          <Link
-            to={profilePath}
-            className="block outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring rounded-full"
-          >
-            <Avatar className="h-11 w-11 ring-1 ring-border/40 transition-all group-hover:ring-ember/30">
-              {post.author.avatar_url && (
-                <AvatarImage
-                  src={post.author.avatar_url}
-                  alt={authorDisplayName(post.author)}
-                />
-              )}
-              <AvatarFallback className="bg-ember/10 text-ember font-display font-bold text-sm">
-                {authorInitial(post.author)}
-              </AvatarFallback>
-            </Avatar>
-          </Link>
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-1.5">
+        <div className="flex gap-3.5">
+          <div className="shrink-0 pt-0.5">
             <Link
               to={profilePath}
-              className="inline-flex items-center gap-2 min-w-0 outline-none rounded-sm focus-visible:ring-2 focus-visible:ring-ring"
+              className="block outline-none rounded-full focus-visible:ring-2 focus-visible:ring-orange"
             >
-              <span className="font-display text-[15px] font-bold text-foreground truncate transition-colors group-hover:text-ember">
-                {authorDisplayName(post.author)}
-              </span>
-              <span className="text-sm text-muted-foreground/55 truncate">
-                {authorHandleStr(post.author.username)}
-              </span>
+              <UserAvatar
+                name={authorName}
+                src={post.author.avatar_url}
+                size={42}
+              />
             </Link>
-            <span className="text-sm text-muted-foreground/35">·</span>
-            <span className="text-sm text-muted-foreground/45 shrink-0">
-              {timeAgo(post.created_at)}
-            </span>
           </div>
 
-          <div className="mb-3">
-            <p className="text-[0.9375rem] leading-relaxed text-foreground/88 whitespace-pre-line">
-              {feedBodyText}
-              {feedTextLong && !feedBodyExpanded ? "…" : null}
-            </p>
-            {feedTextLong && (
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
+              <Link
+                to={profilePath}
+                className="inline-flex items-center gap-2 min-w-0"
+              >
+                <span className="font-grot text-[16px] font-extrabold text-cream truncate transition-colors group-hover:text-orange">
+                  {authorName}
+                </span>
+                <span className="font-mono-jb text-[11px] text-muted-ink truncate">
+                  {authorHandleStr(post.author.username)}
+                </span>
+              </Link>
+              <span className="font-mono-jb text-[11px] text-muted-ink">·</span>
+              <span className="font-mono-jb text-[11px] text-muted-ink shrink-0">
+                {timeAgo(post.created_at)}
+              </span>
+            </div>
+
+            <div className="mb-3">
+              <p className="font-grot text-[16px] leading-[1.45] text-cream/90 whitespace-pre-line">
+                {feedBodyText}
+                {feedTextLong && !feedBodyExpanded ? "…" : null}
+              </p>
+              {feedTextLong && (
+                <button
+                  type="button"
+                  className="mt-1 font-mono-jb text-[12px] font-bold text-orange/80 hover:text-orange transition-colors"
+                  onClick={() => setFeedBodyExpanded((e) => !e)}
+                >
+                  {feedBodyExpanded ? "show less" : "show more"}
+                </button>
+              )}
+            </div>
+
+            {post.image_url && (
               <button
                 type="button"
-                className="mt-1 text-sm font-medium text-ember/70 hover:text-ember transition-colors"
-                onClick={() => setFeedBodyExpanded((e) => !e)}
+                onClick={onOpenMediaLightbox}
+                className="relative block w-full overflow-hidden rounded-2xl border border-ink-line bg-black/30 text-left transition-all hover:border-cream/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange mb-2"
+                aria-label="View full image"
               >
-                {feedBodyExpanded ? "Show less" : "Show more"}
+                <div className="relative w-full max-h-[28rem] overflow-hidden">
+                  <img
+                    src={post.image_url}
+                    alt="Post attachment"
+                    className="w-full max-h-[28rem] object-cover object-center transition-transform duration-500 group-hover:scale-[1.02]"
+                    loading="lazy"
+                  />
+                  <div
+                    className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-black/5"
+                    aria-hidden
+                  />
+                  <div className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-lg bg-black/55 px-2.5 py-1.5 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
+                    <ImageIcon size={12} className="text-cream/80" />
+                    <span className="font-mono-jb text-[11px] font-medium text-cream/80">
+                      view
+                    </span>
+                  </div>
+                </div>
               </button>
             )}
-          </div>
 
-          {post.image_url && (
-            <button
-              type="button"
-              onClick={onOpenMediaLightbox}
-              className="relative block w-full overflow-hidden rounded-2xl border border-border/30 bg-black/30 text-left transition-all hover:border-border/50 hover:shadow-[0_8px_32px_-12px_hsl(var(--ember)/0.18)] focus:outline-none focus-visible:ring-2 focus-visible:ring-ring mb-1"
-              aria-label="View full image"
-            >
-              <div className="relative w-full max-h-[28rem] overflow-hidden">
-                <img
-                  src={post.image_url}
-                  alt="Post attachment"
-                  className="w-full max-h-[28rem] object-cover object-center transition-transform duration-500 group-hover:scale-[1.02]"
-                  loading="lazy"
-                />
-                <div
-                  className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-black/5"
-                  aria-hidden
-                />
-                <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg bg-black/50 px-2.5 py-1.5 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
-                  <ImageIcon size={12} className="text-white/80" />
-                  <span className="text-xs font-medium text-white/75">
-                    View
-                  </span>
-                </div>
-              </div>
-            </button>
-          )}
-
-          <div className="flex items-center gap-1 -ml-2.5 mt-1">
-            <button
-              type="button"
-              onClick={onToggleLike}
-              className={`flex items-center gap-1.5 rounded-full px-3 py-2 text-sm transition-all hover:bg-ember/8 ${
-                liked
-                  ? "text-ember"
-                  : "text-muted-foreground/50 hover:text-foreground/70"
-              }`}
-              aria-label={liked ? "Unlike post" : "Like post"}
-            >
-              <Heart
-                size={16}
-                className={liked ? "fill-ember text-ember" : ""}
-              />
-              <span className="font-semibold tabular-nums">
-                {post.like_count}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={onToggleComments}
-              className="flex items-center gap-1.5 rounded-full px-3 py-2 text-sm text-muted-foreground/50 transition-all hover:bg-muted/15 hover:text-foreground/70"
-              aria-label="Open comments"
-            >
-              <MessageSquare size={16} />
-              <span className="font-semibold tabular-nums">
-                {post.comment_count}
-              </span>
-            </button>
-          </div>
-
-          {isCommentsOpen && (
-            <div className="mt-3 pt-3 border-t border-border/20 space-y-0">
-              <div className="space-y-3">
-                {commentsLoading ? (
-                  <div className="text-xs text-muted-foreground/50 py-2">
-                    Loading comments...
-                  </div>
-                ) : comments.length === 0 ? (
-                  <div className="text-xs text-muted-foreground/50 py-2">
-                    No comments yet. Be the first to share feedback.
-                  </div>
-                ) : (
-                  comments.map((c) => (
-                    <div key={c.id} className="flex items-start gap-2.5">
-                      <Avatar className="h-7 w-7 mt-0.5 shrink-0">
-                        {c.author.avatar_url && (
-                          <AvatarImage
-                            src={c.author.avatar_url}
-                            alt={
-                              c.author.full_name ?? c.author.username ?? "User"
-                            }
-                          />
-                        )}
-                        <AvatarFallback className="bg-ember/8 text-ember font-display text-xs font-bold">
-                          {(c.author.full_name ?? c.author.username ?? "U")
-                            .charAt(0)
-                            .toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline gap-2">
-                          <p className="text-xs font-bold text-foreground">
-                            {c.author.full_name?.trim() ||
-                              (c.author.username
-                                ? `@${c.author.username}`
-                                : "Anonymous")}
-                          </p>
-                          <p className="text-xs text-muted-foreground/45">
-                            {timeAgo(c.created_at)}
-                          </p>
-                        </div>
-                        <p className="mt-1.5 text-sm leading-relaxed text-foreground/75 whitespace-pre-line">
-                          {c.content}
-                        </p>
-                      </div>
-                    </div>
-                  ))
+            {/* Action bar */}
+            <div className="flex items-center gap-1 -ml-2 mt-2 pt-3 border-t border-dashed border-ink-line">
+              <button
+                type="button"
+                onClick={onToggleLike}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-3 py-2 font-mono-jb text-[12px] transition-colors hover:bg-orange/10",
+                  liked ? "text-orange" : "text-cream/55 hover:text-cream/85",
                 )}
-              </div>
-
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  onSubmitComment();
-                }}
-                className="mt-14 pt-4 border-t border-border/20 flex gap-2"
+                aria-label={liked ? "Unlike post" : "Like post"}
               >
-                <Textarea
-                  id={`comment-${post.id}`}
-                  value={commentDraft}
-                  onChange={(e) => onChangeCommentDraft(e.target.value)}
-                  placeholder="Write something thoughtful..."
-                  className="bg-muted/10 border-border/30 focus-visible:ring-ember/40 min-h-[38px] max-h-[120px] text-sm resize-none flex-1"
-                  rows={1}
+                <Heart
+                  size={14}
+                  className={liked ? "fill-orange text-orange" : ""}
                 />
-                <button
-                  type="submit"
-                  className="btn-primary text-xs px-4 py-2 self-end shrink-0"
-                  disabled={!commentDraft.trim() || commentSubmitting}
-                >
-                  {commentSubmitting ? "..." : "Post"}
-                </button>
-              </form>
+                <span className="font-bold tabular-nums">{post.like_count}</span>
+              </button>
+              <button
+                type="button"
+                onClick={onToggleComments}
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 font-mono-jb text-[12px] text-cream/55 hover:bg-cream/[0.04] hover:text-cream/85 transition-colors"
+                aria-label="Open comments"
+              >
+                <MessageSquare size={14} />
+                <span className="font-bold tabular-nums">
+                  {post.comment_count}
+                </span>
+              </button>
             </div>
-          )}
+
+            {isCommentsOpen && (
+              <div className="mt-3 pt-3 border-t border-dashed border-ink-line space-y-0">
+                <div className="space-y-3.5">
+                  {commentsLoading ? (
+                    <p className="font-mono-jb text-[12px] text-muted-ink py-2">
+                      Loading comments…
+                    </p>
+                  ) : comments.length === 0 ? (
+                    <p className="font-mono-jb text-[12px] text-muted-ink py-2">
+                      No comments yet. Be the first to share feedback.
+                    </p>
+                  ) : (
+                    comments.map((c) => (
+                      <CommentRow key={c.id} comment={c} />
+                    ))
+                  )}
+                </div>
+
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    onSubmitComment();
+                  }}
+                  className="mt-6 pt-4 border-t border-dashed border-ink-line flex gap-2"
+                >
+                  <Textarea
+                    id={`comment-${post.id}`}
+                    value={commentDraft}
+                    onChange={(e) => onChangeCommentDraft(e.target.value)}
+                    placeholder="write something thoughtful…"
+                    className="bg-cream/[0.04] border-ink-line focus-visible:ring-orange/40 min-h-[38px] max-h-[120px] text-[13px] font-mono-jb resize-none flex-1 text-cream placeholder:text-muted-ink"
+                    rows={1}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!commentDraft.trim() || commentSubmitting}
+                    className="self-end shrink-0 inline-flex items-center gap-1.5 rounded-full bg-orange text-cream font-mono-jb font-bold text-[12px] px-4 py-2 shadow-cta-orange hover:translate-y-px transition-transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                  >
+                    {commentSubmitting ? "…" : "post"}
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="mx-5 h-px bg-border/15" />
+      <div className="mx-6 h-px bg-cream/[0.06]" />
     </motion.article>
   );
 }
 
-
+function CommentRow({ comment: c }: { comment: PostComment }) {
+  const name = c.author.full_name?.trim() || c.author.username || "Anonymous";
+  return (
+    <div className="flex items-start gap-2.5">
+      <UserAvatar
+        name={name}
+        src={c.author.avatar_url}
+        size={28}
+        className="mt-0.5"
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline gap-2">
+          <p className="font-grot text-[13px] font-bold text-cream truncate">
+            {c.author.full_name?.trim() ||
+              (c.author.username ? `@${c.author.username}` : "Anonymous")}
+          </p>
+          <p className="font-mono-jb text-[10px] text-muted-ink">
+            {timeAgo(c.created_at)}
+          </p>
+        </div>
+        <p className="mt-1 font-grot text-[14px] leading-[1.5] text-cream/80 whitespace-pre-line">
+          {c.content}
+        </p>
+      </div>
+    </div>
+  );
+}

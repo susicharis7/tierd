@@ -1,14 +1,20 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Separator } from "./ui/separator";
+import {
+  Doodle,
+  MonoCaption,
+  StickerBadge,
+  Tape,
+} from "./tierd";
+import { cn } from "../lib/utils";
 import { login, register, signInWithOAuthStrategy } from "../features/authFeatures/auth";
 import { authProviderStrategies } from "../strategies/auth";
 
@@ -20,7 +26,11 @@ interface AuthDialogProps {
   defaultMode?: AuthMode;
 }
 
-const AuthDialog = ({ open, onOpenChange, defaultMode = "login" }: AuthDialogProps) => {
+const AuthDialog = ({
+  open,
+  onOpenChange,
+  defaultMode = "login",
+}: AuthDialogProps) => {
   const [mode, setMode] = useState<AuthMode>(defaultMode);
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
@@ -58,13 +68,6 @@ const AuthDialog = ({ open, onOpenChange, defaultMode = "login" }: AuthDialogPro
     e.preventDefault();
     setErrorMsg("");
 
-    console.log("[AUTH_DIALOG] submit", {
-      mode,
-      email,
-      username,
-      fullName,
-    });
-
     try {
       setLoading(true);
 
@@ -86,10 +89,10 @@ const AuthDialog = ({ open, onOpenChange, defaultMode = "login" }: AuthDialogPro
         });
       }
 
-      console.log("[AUTH_DIALOG] success", { mode, email });
       onOpenChange(false);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Authentication failed.";
+      const message =
+        err instanceof Error ? err.message : "Authentication failed.";
       setErrorMsg(message);
       console.error("AUTH ERROR:", err);
     } finally {
@@ -99,37 +102,83 @@ const AuthDialog = ({ open, onOpenChange, defaultMode = "login" }: AuthDialogPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-surface max-w-[420px] border-border/60 p-0 gap-0 overflow-hidden">
-        <div className="p-6 pb-0">
-          <DialogHeader className="text-center sm:text-center space-y-2">
-            <DialogTitle className="font-display text-2xl font-bold tracking-tight">
+      <DialogContent
+        className={cn(
+          "max-w-[440px] bg-ink-2 border-cream/10 text-cream p-0 gap-0 overflow-visible",
+          "data-[state=open]:animate-in data-[state=closed]:animate-out",
+          "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
+          "data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95",
+          "data-[state=open]:slide-in-from-bottom-2 data-[state=closed]:slide-out-to-bottom-2",
+          "duration-250 ease-out",
+        )}
+      >
+        {/* Decorative chrome */}
+        <Tape
+          color="tape"
+          size="md"
+          tilt={-4}
+          className="-top-[10px] left-14 z-10"
+        />
+        <Doodle.Sparkle
+          size={22}
+          className="absolute top-5 right-5 text-orange pointer-events-none"
+          aria-hidden
+        />
+        <Doodle.Sparkle
+          size={12}
+          className="absolute top-4 right-14 text-orange/60 pointer-events-none"
+          aria-hidden
+        />
+
+        <div className="px-7 pt-7 pb-2 text-center">
+          <StickerBadge
+            color={isLogin ? "cream" : "orange"}
+            tilt={-2}
+            icon={
+              isLogin ? (
+                <Doodle.Bolt size={10} />
+              ) : (
+                <Doodle.Sparkle size={10} />
+              )
+            }
+            className="mb-5"
+          >
+            {isLogin ? "welcome back" : "join the ranks"}
+          </StickerBadge>
+
+          <DialogTitle asChild>
+            <h2 className="font-boldonse text-[40px] sm:text-[48px] leading-[0.95] text-cream">
               {isLogin ? (
                 <>
-                  Welcome back to <span className="gradient-text-warm">Tierd</span>
+                  log in
+                  <span className="text-orange">.</span>
                 </>
               ) : (
                 <>
-                  Join <span className="gradient-text-warm">Tierd</span>
+                  join Tierd
+                  <span className="text-orange">.</span>
                 </>
               )}
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              {isLogin
-                ? "Log in to rank, debate, and climb the leaderboard."
-                : "Create your account and start ranking."}
-            </DialogDescription>
-          </DialogHeader>
+            </h2>
+          </DialogTitle>
+
+          <DialogDescription className="font-mono-jb text-[12px] text-muted-ink mt-3 leading-[1.5]">
+            {isLogin
+              ? "Climb the ladder. Ship daily. Prove the rest."
+              : "Connect your work and let the leaderboard do the talking."}
+          </DialogDescription>
         </div>
 
-        <div className="p-6 space-y-4">
-          <div className="grid gap-3">
+        <div className="px-7 pt-5 pb-5 space-y-4">
+          {/* OAuth */}
+          <div className="grid gap-2.5">
             {authProviderStrategies.map((strategy) => (
               <button
                 key={strategy.id}
                 type="button"
-                className="btn-ghost w-full justify-center gap-3 py-2.5 text-sm"
                 disabled={loading}
                 onClick={() => handleOAuth(strategy)}
+                className="inline-flex items-center justify-center gap-2.5 rounded-[12px] bg-ink border-[1.5px] border-cream/30 text-cream font-mono-jb font-bold text-[13px] px-4 py-3 hover:border-cream/50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <strategy.Icon />
                 {strategy.label}
@@ -137,50 +186,45 @@ const AuthDialog = ({ open, onOpenChange, defaultMode = "login" }: AuthDialogPro
             ))}
           </div>
 
+          {/* Dashed "or" divider */}
           <div className="flex items-center gap-3">
-            <Separator className="flex-1" />
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-widest">or</span>
-            <Separator className="flex-1" />
+            <div className="flex-1 h-px border-b border-dashed border-cream/15" />
+            <MonoCaption tone="muted" className="text-[10px]">
+              // OR
+            </MonoCaption>
+            <div className="flex-1 h-px border-b border-dashed border-cream/15" />
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-3">
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-3.5">
             {!isLogin && (
-              <div className="space-y-1.5">
-                <Label htmlFor="auth-fullname" className="text-xs text-muted-foreground">
-                  Full name
-                </Label>
+              <FieldRow id="auth-fullname" label="// FULL NAME">
                 <Input
                   id="auth-fullname"
                   type="text"
-                  placeholder="John Doe"
+                  placeholder="Tarik Skender"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="bg-muted/30 border-border/60 focus-visible:ring-ember/50"
+                  className={fieldClass}
                 />
-              </div>
+              </FieldRow>
             )}
 
             {!isLogin && (
-              <div className="space-y-1.5">
-                <Label htmlFor="auth-username" className="text-xs text-muted-foreground">
-                  Username
-                </Label>
+              <FieldRow id="auth-username" label="// HANDLE">
                 <Input
                   id="auth-username"
                   type="text"
-                  placeholder="your_handle"
+                  placeholder="@your_handle"
                   autoComplete="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="bg-muted/30 border-border/60 focus-visible:ring-ember/50"
+                  className={fieldClass}
                 />
-              </div>
+              </FieldRow>
             )}
 
-            <div className="space-y-1.5">
-              <Label htmlFor="auth-email" className="text-xs text-muted-foreground">
-                Email
-              </Label>
+            <FieldRow id="auth-email" label="// EMAIL">
               <Input
                 id="auth-email"
                 type="email"
@@ -188,80 +232,111 @@ const AuthDialog = ({ open, onOpenChange, defaultMode = "login" }: AuthDialogPro
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-muted/30 border-border/60 focus-visible:ring-ember/50"
+                className={fieldClass}
               />
-            </div>
+            </FieldRow>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="auth-password" className="text-xs text-muted-foreground">
-                Password
-              </Label>
+            <FieldRow id="auth-password" label="// PASSWORD">
               <Input
                 id="auth-password"
                 type="password"
-                placeholder="********"
+                placeholder="••••••••"
                 autoComplete={isLogin ? "current-password" : "new-password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="bg-muted/30 border-border/60 focus-visible:ring-ember/50"
+                className={fieldClass}
               />
-            </div>
+            </FieldRow>
 
             {!isLogin && (
-              <div className="space-y-1.5">
-                <Label htmlFor="auth-confirm" className="text-xs text-muted-foreground">
-                  Confirm password
-                </Label>
+              <FieldRow id="auth-confirm" label="// CONFIRM PASSWORD">
                 <Input
                   id="auth-confirm"
                   type="password"
-                  placeholder="********"
+                  placeholder="••••••••"
                   autoComplete="new-password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="bg-muted/30 border-border/60 focus-visible:ring-ember/50"
+                  className={fieldClass}
                 />
-              </div>
+              </FieldRow>
             )}
 
-            {errorMsg && <p className="text-xs text-red-400">{errorMsg}</p>}
+            {errorMsg && (
+              <p className="font-mono-jb text-[11px] text-orange-2 leading-[1.45]">
+                {errorMsg}
+              </p>
+            )}
 
-            <button type="submit" className="btn-primary w-full mt-1" disabled={loading}>
-              {loading ? "Please wait..." : isLogin ? "Log in" : "Create account"}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-orange text-cream font-mono-jb font-bold text-[13px] px-5 py-3 shadow-cta-orange hover:translate-y-px transition-transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+            >
+              {loading ? (
+                "please wait…"
+              ) : (
+                <>
+                  <Doodle.Bolt size={13} className="text-cream" />
+                  {isLogin ? "log in" : "create account"}
+                </>
+              )}
             </button>
           </form>
         </div>
 
-        <div className="border-t border-border/60 bg-muted/20 px-6 py-4 text-center text-sm text-muted-foreground">
-          {isLogin ? (
-            <>
-              Don&apos;t have an account?{" "}
-              <button
-                type="button"
-                onClick={() => setMode("signup")}
-                className="font-semibold text-ember hover:text-ember-glow transition-colors"
-              >
-                Sign up
-              </button>
-            </>
-          ) : (
-            <>
-              Already have an account?{" "}
-              <button
-                type="button"
-                onClick={() => setMode("login")}
-                className="font-semibold text-ember hover:text-ember-glow transition-colors"
-              >
-                Log in
-              </button>
-            </>
-          )}
+        {/* Mode switch footer */}
+        <div className="border-t border-dashed border-cream/10 px-7 py-4 text-center">
+          <p className="font-mono-jb text-[12px] text-muted-ink">
+            {isLogin ? (
+              <>
+                new to Tierd<span className="text-orange">.</span>?{" "}
+                <button
+                  type="button"
+                  onClick={() => setMode("signup")}
+                  className="font-bold text-orange underline decoration-dashed underline-offset-[3px] hover:text-orange-2 transition-colors"
+                >
+                  sign up
+                </button>
+              </>
+            ) : (
+              <>
+                already verified?{" "}
+                <button
+                  type="button"
+                  onClick={() => setMode("login")}
+                  className="font-bold text-orange underline decoration-dashed underline-offset-[3px] hover:text-orange-2 transition-colors"
+                >
+                  log in
+                </button>
+              </>
+            )}
+          </p>
         </div>
       </DialogContent>
     </Dialog>
   );
 };
 
+const fieldClass =
+  "bg-cream/[0.04] border-cream/15 text-cream font-mono-jb text-[13px] placeholder:text-muted-ink/70 focus-visible:ring-orange/40 focus-visible:border-orange/60 rounded-[10px] h-10 px-3";
+
+interface FieldRowProps {
+  id: string;
+  label: string;
+  children: React.ReactNode;
+}
+
+const FieldRow = ({ id, label, children }: FieldRowProps) => (
+  <div className="space-y-1.5">
+    <Label
+      htmlFor={id}
+      className="font-mono-jb text-[10px] uppercase tracking-[0.1em] text-muted-ink"
+    >
+      {label}
+    </Label>
+    {children}
+  </div>
+);
+
 export default AuthDialog;
-
-

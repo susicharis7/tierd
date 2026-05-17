@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../../lib/utils";
 
 const tapeVariants = cva(
-  "absolute pointer-events-none mix-blend-multiply opacity-85 shadow-[0_1px_2px_rgba(0,0,0,0.15)]",
+  "absolute pointer-events-none opacity-85 shadow-[0_1px_2px_rgba(0,0,0,0.15)]",
   {
     variants: {
       color: {

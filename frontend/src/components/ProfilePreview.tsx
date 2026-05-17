@@ -1,126 +1,164 @@
-import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { MapPin, ExternalLink, BadgeCheck, Flame, Star, Globe, Code, Trophy } from "lucide-react";
+
+import {
+  Doodle,
+  MonoCaption,
+  Sticker,
+  StickerBadge,
+  Tape,
+  TierBadge,
+  UserAvatar,
+} from "./tierd";
+
+const features = [
+  {
+    icon: Doodle.CodeBracket,
+    title: "Verified Links",
+    desc: "Connect GitHub, Twitter, and personal site.",
+  },
+  {
+    icon: Doodle.Sparkle,
+    title: "Featured Shipments",
+    desc: "Highlight your best projects with live metrics.",
+  },
+  {
+    icon: Doodle.Trophy,
+    title: "Badges & Tiers",
+    desc: "Earn public recognition for specific tech stacks.",
+  },
+] as const;
 
 const ProfilePreview = () => {
   return (
-    <section className="relative py-24 border-t border-border">
+    <section className="relative py-24 border-t border-dashed border-cream/10">
       <div className="section-container">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Left copy */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <div className="tier-badge mb-4 w-fit">
-              <Star size={12} />
-              PRESTIGE PORTFOLIO
-            </div>
-            <h2 className="font-title font-bold text-3xl sm:text-4xl lg:text-5xl text-foreground mb-4 leading-tight">
-              Your new central hub<span className="text-ember">.</span>
+          <div>
+            <StickerBadge color="cream" tilt={-2} className="mb-5">
+              prestige portfolio
+            </StickerBadge>
+            <h2 className="font-boldonse text-[44px] sm:text-[56px] lg:text-[68px] leading-[0.95] text-cream">
+              your new <span className="text-orange">central hub.</span>
             </h2>
-            <p className="text-muted-foreground text-sm sm:text-base max-w-md mb-8 leading-relaxed">
-              Stop sending links to five different platforms. Tierd aggregates your GitHub, LeetCode, deployed projects, and hackathon wins into one undeniable source of truth.
+            <p className="font-grot font-medium text-[17px] text-cream/75 mt-6 max-w-[480px] leading-[1.6]">
+              Stop sending links to five different platforms. Tierd aggregates your
+              GitHub, LeetCode, deployed projects, and hackathon wins into one
+              undeniable source of truth.
             </p>
 
-            <div className="space-y-5">
-              {[
-                { icon: ExternalLink, title: "Verified Links", desc: "Connect GitHub, Twitter, and personal site." },
-                { icon: Star, title: "Featured Shipments", desc: "Highlight your best projects with live metrics." },
-                { icon: Flame, title: "Badges & Tiers", desc: "Earn public recognition for specific tech stacks." },
-              ].map((f, i) => (
-                <div key={i} className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-md flex items-center justify-center shrink-0" style={{
-                    background: "linear-gradient(135deg, hsl(var(--ember) / 0.12), hsl(var(--ember-glow) / 0.08))",
-                    border: "1px solid hsl(var(--ember) / 0.1)"
-                  }}>
-                    <f.icon size={18} className="text-ember" />
+            <div className="space-y-5 mt-9">
+              {features.map((f) => {
+                const Icon = f.icon;
+                return (
+                  <div key={f.title} className="flex items-start gap-4">
+                    <div className="w-11 h-11 rounded-xl bg-orange/15 border border-orange/25 flex items-center justify-center shrink-0">
+                      <Icon size={20} className="text-orange" />
+                    </div>
+                    <div>
+                      <h3 className="font-grot font-extrabold text-[15px] text-cream mb-1">
+                        {f.title}
+                      </h3>
+                      <p className="font-mono-jb text-[12px] text-muted-ink leading-[1.6]">
+                        {f.desc}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-display font-semibold text-sm text-foreground mb-0.5">{f.title}</h3>
-                    <p className="text-xs text-muted-foreground">{f.desc}</p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-          </motion.div>
+          </div>
 
-          {/* Right: Profile card */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="glass-surface-hover p-6 sm:p-8 relative"
+          {/* Right — profile sticker preview */}
+          <Sticker
+            color="cream"
+            tilt={1.5}
+            padding="lg"
+            radius="xl"
+            className="relative"
           >
-            {/* Remote badge */}
-            <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/50 text-xs text-muted-foreground">
-              <Globe size={10} />
-              Remote
+            <Tape color="tape" size="md" tilt={-4} className="-top-[10px] left-10" />
+
+            <div className="flex items-start justify-between mb-5">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <UserAvatar name="Marcus Levin" size={72} />
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2">
+                    <TierBadge tier="T1" size="sm" />
+                  </span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-grot font-extrabold text-[22px] text-ink leading-none">
+                      Marcus Levin
+                    </h3>
+                    <Doodle.Trophy size={18} className="text-orange" />
+                  </div>
+                  <p className="font-mono-jb text-[11px] uppercase tracking-[0.08em] text-muted-cream mt-1.5">
+                    @mlevin · senior frontend
+                  </p>
+                  <p className="font-mono-jb text-[11px] text-muted-cream mt-0.5">
+                    📍 Vercel · React, TS
+                  </p>
+                </div>
+              </div>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-ink/[0.07] font-mono-jb text-[10px] text-muted-cream">
+                🌐 Remote
+              </span>
             </div>
 
-            {/* Header */}
-            <div className="flex flex-col items-start gap-4 mb-5">
-              <div className="relative">
-                <div className="w-20 h-20 rounded-full bg-muted/60 flex items-center justify-center font-display font-bold text-3xl shrink-0">
-                  M
-                </div>
-                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 tier-badge text-[9px] py-0.5 px-2">A-TIER</span>
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-display font-bold text-xl text-foreground">Marcus Levin</h3>
-                  <Trophy size={16} className="text-ember" />
-                </div>
-                <p className="text-sm text-muted-foreground mb-1">@mlevin · Senior Frontend Engineer</p>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1"><MapPin size={10} /> Vercel</span>
-                  <span className="flex items-center gap-1"><Code size={10} /> React, TS</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-3 mb-5">
+            <div className="grid grid-cols-3 gap-2.5 mb-5">
               {[
                 { label: "SCORE", value: "10.2k" },
                 { label: "GLOBAL", value: "#14" },
                 { label: "SHIPS", value: "42" },
-              ].map((stat) => (
-                <div key={stat.label} className="text-center p-3 rounded-md bg-muted/30">
-                  <p className="font-display font-bold text-lg text-foreground">{stat.value}</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{stat.label}</p>
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  className="text-center p-3 rounded-xl bg-ink/[0.05] border border-dashed border-ink/10"
+                >
+                  <div className="font-boldonse text-[22px] text-orange leading-none">
+                    {s.value}
+                  </div>
+                  <div className="font-mono-jb text-[9px] uppercase tracking-[0.1em] text-muted-cream mt-1">
+                    {s.label}
+                  </div>
                 </div>
               ))}
             </div>
 
-            {/* Featured Ship */}
-            <div className="p-4 rounded-md bg-muted/20 border border-border">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-1.5">
-                  <Star size={12} className="text-ember" />
-                  <span className="text-xs font-display font-semibold text-foreground">Featured Ship</span>
-                </div>
-                <ExternalLink size={10} className="text-muted-foreground" />
+            <div className="rounded-xl bg-ink/[0.05] border border-dashed border-ink/15 p-4">
+              <div className="flex items-center justify-between mb-1.5">
+                <MonoCaption tone="muted" className="text-muted-cream">
+                  // featured ship
+                </MonoCaption>
+                <span className="font-mono-jb text-[10px] text-muted-cream">↗</span>
               </div>
-              <h4 className="font-display font-bold text-sm text-foreground mb-1">Nexar UI Library</h4>
-              <p className="text-xs text-muted-foreground leading-relaxed mb-3">
+              <h4 className="font-grot font-extrabold text-[15px] text-ink">
+                Nexar UI Library
+              </h4>
+              <p className="font-mono-jb text-[11px] text-muted-cream leading-[1.55] mt-1">
                 A modern, accessible component library built with Tailwind and Radix.
               </p>
-              <div className="flex gap-1.5">
+              <div className="flex gap-1.5 mt-2.5">
                 {["React", "Tailwind"].map((tag) => (
-                  <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full bg-muted/50 text-muted-foreground">{tag}</span>
+                  <span
+                    key={tag}
+                    className="rounded-full bg-orange-soft text-ink font-mono-jb text-[10px] font-bold px-2 py-0.5"
+                  >
+                    #{tag}
+                  </span>
                 ))}
               </div>
             </div>
 
-            <div className="mt-5 text-center">
-              <Link to="/profile/jay" className="btn-ghost text-xs">
-                View full profile
-              </Link>
-            </div>
-          </motion.div>
+            <Link
+              to="/profile/jay"
+              className="mt-5 block w-full text-center rounded-full bg-ink text-cream font-mono-jb text-[12px] font-bold px-4 py-3 shadow-press hover:translate-y-px transition-transform"
+            >
+              view full profile →
+            </Link>
+          </Sticker>
         </div>
       </div>
     </section>

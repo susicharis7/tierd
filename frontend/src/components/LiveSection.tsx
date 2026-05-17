@@ -1,62 +1,28 @@
-import { motion } from "framer-motion";
-import { TrendingUp, Clock, Trophy } from "lucide-react";
 import { Link } from "react-router-dom";
+
+import {
+  Doodle,
+  MonoCaption,
+  Sticker,
+  StickerBadge,
+  Tape,
+  UserAvatar,
+} from "./tierd";
+import { cn } from "../lib/utils";
 import {
   useActiveChallengeQuery,
   useRisingDevelopersQuery,
 } from "../features/rankingFeatures/useRankingData";
 
-const posts = [
-  {
-    author: "Marko",
-    handle: "Backend Engineer",
-    avatar: "M",
-    time: "2h ago",
-    content:
-      "Rewrote the main matching service in Rust. Latency dropped from 250ms to 12ms. Deployed to production.",
-    reactions: 89,
-    comments: 24,
-    xp: "+350",
-    tags: ["Rust", "Performance"],
-    tier: "A-TIER",
-  },
-  {
-    author: "Elena",
-    handle: "Frontend Architect",
-    avatar: "E",
-    time: "5h ago",
-    content:
-      "Published a new open-source React component library. 2k stars in the first 24h.",
-    reactions: 124,
-    comments: 37,
-    xp: "+500",
-    tags: ["React", "Open Source"],
-    tier: "S-TIER",
-  },
-  {
-    author: "Tariq",
-    handle: "AI Researcher",
-    avatar: "T",
-    time: "1d ago",
-    content:
-      "Fine-tuned a custom LLM for internal docs. Achieved 94% accuracy on domain-specific queries.",
-    reactions: 56,
-    comments: 11,
-    xp: "+420",
-    tags: ["AI", "ML"],
-    tier: "S-TIER",
-  },
-];
+const tilts = [-1, 0.5, -0.5, 1, -0.8, 0.3];
 
-const container = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.1 } },
-};
-
-const item = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-};
+const activityPlaceholders = [
+  { who: "Dino B.", tag: "shipped", what: "neuralquery v2 — semantic search in 200 lines.", pts: "+30", when: "2m" },
+  { who: "Mia V.", tag: "won", what: '"CLI Speedrun" challenge with tierd-cli.', pts: "+120", when: "12m" },
+  { who: "Amir H.", tag: "merged", what: "4 PRs to rust-lang/rust this week.", pts: "+80", when: "34m" },
+  { who: "Sara K.", tag: "tier up", what: "just hit T1 Shipper. earned in 11 weeks.", pts: "↑", when: "2h", big: true },
+  { who: "Haris S.", tag: "starred", what: "CRDTSync now at 342 ⭐ — top trending repo.", pts: "+15", when: "3h" },
+] as const;
 
 function formatTimeLeft(endsAtIso: string): string {
   const now = Date.now();
@@ -74,173 +40,164 @@ const LiveSection = () => {
   const activeChallenge = activeChallengeQuery.data;
 
   return (
-    <section className="relative py-24 border-t border-border">
+    <section className="relative py-24 border-t border-dashed border-cream/10 bg-cream/[0.02]">
       <div className="section-container">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="flex items-end justify-between mb-12"
-        >
-          <div>
-            <h2 className="font-display font-bold text-3xl sm:text-4xl text-foreground mb-2">
-              The Feed<span className="text-ember">.</span>
+        <div className="flex items-center justify-between flex-wrap gap-4 mb-9">
+          <div className="flex items-center gap-3.5">
+            <Doodle.Pulse size={20} className="text-orange" />
+            <h2 className="font-boldonse text-3xl sm:text-[32px] text-cream leading-none">
+              live feed
             </h2>
-            <p className="text-muted-foreground text-sm max-w-lg">
-              Real-time accomplishments, global leaderboards, and rising builders.
-            </p>
+            <span className="inline-flex items-center gap-1.5 font-mono-jb text-[11px] text-forest uppercase tracking-[0.1em]">
+              <span className="w-2 h-2 rounded-full bg-forest shadow-[0_0_8px_currentColor] animate-pulse" />
+              streaming now
+            </span>
           </div>
           <Link
             to="/explore"
-            className="hidden sm:flex items-center gap-1.5 text-xs font-display font-semibold text-ember uppercase tracking-wider hover:text-ember-glow transition-colors"
+            className="font-mono-jb text-[12px] uppercase tracking-[0.1em] text-cream/70 hover:text-cream transition-colors inline-flex items-center gap-1.5"
           >
-            View Full Feed
-            <TrendingUp size={12} />
+            // last 24h →
           </Link>
-        </motion.div>
+        </div>
 
-        <motion.div
-          variants={container}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
-          className="grid lg:grid-cols-3 gap-6"
-        >
-          <div className="lg:col-span-2 space-y-4">
-            {posts.map((post, i) => (
-              <motion.div key={i} variants={item} className="glass-surface-hover p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center font-display font-bold text-sm">
-                      {post.avatar}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Activity cards (preserves the "feed" intent of the original posts) */}
+          <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {activityPlaceholders.map((a, i) => (
+              <div
+                key={a.who}
+                className={cn(
+                  "relative rounded-[16px] p-[18px] border",
+                  a.big
+                    ? "bg-orange text-cream border-transparent shadow-glow-orange"
+                    : "bg-ink-2 text-cream border-ink-line",
+                )}
+                style={{ transform: `rotate(${tilts[i % tilts.length]}deg)` }}
+              >
+                <div className="flex items-center gap-2.5 mb-2.5">
+                  <UserAvatar name={a.who} size={32} />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-grot font-extrabold text-[13px] truncate">
+                      {a.who}
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-display font-bold text-sm text-foreground">
-                          {post.author}
-                        </p>
-                        <span className="tier-badge text-[9px] py-0 px-1.5">
-                          {post.tier}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {post.handle} · {post.time}
-                      </p>
+                    <div className="font-mono-jb text-[9px] tracking-[0.08em] uppercase">
+                      <span
+                        className={cn(
+                          "font-bold",
+                          a.big ? "text-cream" : "text-orange",
+                        )}
+                      >
+                        {a.tag}
+                      </span>
+                      <span className={a.big ? "text-cream/70" : "text-muted-ink"}>
+                        {" "}
+                        · {a.when} ago
+                      </span>
                     </div>
                   </div>
-                  <div
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-                    style={{ border: "1px solid hsl(var(--ember) / 0.2)" }}
+                  <span
+                    className={cn(
+                      "rounded-md font-mono-jb text-[10px] font-bold px-2 py-0.5",
+                      a.big
+                        ? "bg-cream text-orange"
+                        : "bg-orange/15 text-orange-2",
+                    )}
                   >
-                    <Trophy size={12} className="text-ember" />
-                    <span className="text-xs font-display font-bold text-ember">
-                      {post.xp}
-                    </span>
-                  </div>
+                    {a.pts}
+                  </span>
                 </div>
-                <p className="text-sm text-foreground/85 leading-relaxed mb-3">
-                  {post.content}
+                <p className="font-grot font-medium text-[14px] leading-[1.45]">
+                  {a.what}
                 </p>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {post.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="text-[10px] px-2.5 py-1 rounded-full bg-muted/50 text-muted-foreground"
-                    >
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              </motion.div>
+              </div>
             ))}
           </div>
 
-          <div className="space-y-4">
-            <motion.div variants={item} className="glass-surface p-5">
-              <h3 className="font-display font-bold text-xs text-muted-foreground mb-4 flex items-center gap-2 uppercase tracking-wider">
-                <TrendingUp size={14} className="text-ember" />
-                Rising Builders
-              </h3>
+          {/* Right column — rising + active challenge */}
+          <div className="space-y-5">
+            <Sticker color="cream" tilt={-1} padding="lg" radius="lg" className="relative">
+              <Tape color="tape" size="sm" tilt={-4} className="-top-[10px] left-8" />
+              <MonoCaption tone="muted" className="mb-3.5">
+                // rising builders
+              </MonoCaption>
               {risingQuery.isPending && (
-                <p className="text-xs text-muted-foreground">Loading rising data...</p>
+                <p className="font-mono-jb text-[12px] text-muted-cream">
+                  Loading rising data…
+                </p>
               )}
               <div className="space-y-3">
                 {risingDevs.map((dev, i) => (
-                  <div key={`${dev.profileId}-${dev.rank}`} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="font-display font-bold text-sm text-muted-foreground w-4">
-                        {i + 1}
-                      </span>
-                      <div className="w-8 h-8 rounded-full bg-muted/40 flex items-center justify-center text-xs font-bold">
-                        {(dev.fullName || dev.username || "U").charAt(0).toUpperCase()}
-                      </div>
-                      <p className="text-sm font-medium text-foreground">
+                  <div
+                    key={`${dev.profileId}-${dev.rank}`}
+                    className="flex items-center gap-3"
+                  >
+                    <span className="font-boldonse text-[16px] text-orange min-w-[18px]">
+                      0{i + 1}
+                    </span>
+                    <UserAvatar
+                      name={dev.fullName || dev.username || "U"}
+                      src={dev.avatarUrl}
+                      size={32}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-grot font-bold text-[14px] text-ink truncate">
                         {dev.fullName}
+                      </p>
+                      <p className="font-mono-jb text-[10px] uppercase tracking-[0.06em] text-muted-cream truncate">
+                        @{dev.username}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-display font-bold text-foreground">
+                      <div className="font-boldonse text-[14px] text-ink">
                         {dev.score.toLocaleString()}
-                      </p>
-                      <p className="text-[10px] text-ember font-medium">
-                        {dev.delta >= 0 ? "+" : ""}
+                      </div>
+                      <div className="font-mono-jb text-[10px] font-bold text-forest">
+                        {dev.delta >= 0 ? "↑ +" : "↓ "}
                         {dev.delta}
-                      </p>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
-            </motion.div>
+            </Sticker>
 
-            <motion.div variants={item} className="glass-surface p-5">
-              <h3 className="font-display font-bold text-xs text-muted-foreground mb-4 flex items-center gap-2 uppercase tracking-wider">
-                <Clock size={14} className="text-muted-foreground" />
-                Active Challenge
-              </h3>
-              <div className="p-4 rounded-md bg-muted/20 mb-4">
-                <h4 className="font-display font-bold text-sm text-foreground mb-1">
-                  {activeChallenge?.title ?? "No active challenge"}
-                </h4>
-                <p className="text-xs text-muted-foreground mb-3">
-                  {activeChallenge?.description ??
-                    "Challenges will appear here when published and active."}
-                </p>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-ember font-semibold">
-                    Reward: +{activeChallenge?.rewardPoints ?? 0} pts
-                  </span>
-                  <span className="text-muted-foreground">
-                    {activeChallenge
-                      ? `Ends in ${formatTimeLeft(activeChallenge.endsAt)}`
-                      : "No timer"}
-                  </span>
-                </div>
+            <div className="relative rounded-[18px] bg-ink-2 border border-ink-line p-5">
+              <div className="flex items-center justify-between mb-3.5">
+                <MonoCaption tone="cream">// active challenge</MonoCaption>
+                <StickerBadge color="tape" className="text-[9px] px-2 py-1">
+                  LIVE NOW
+                </StickerBadge>
               </div>
-              <button className="btn-ghost text-xs w-full py-2.5">Join Challenge</button>
-            </motion.div>
-
-            <motion.div
-              variants={item}
-              className="glass-surface p-5"
-              style={{ borderColor: "hsl(var(--ember) / 0.15)" }}
-            >
-              <p className="font-display font-semibold text-sm text-foreground mb-2">
-                Join the network
+              <h3 className="font-grot font-extrabold text-[18px] text-cream leading-tight mb-2">
+                {activeChallenge?.title ?? "No active challenge"}
+              </h3>
+              <p className="font-mono-jb text-[12px] text-muted-ink leading-[1.6] mb-4">
+                {activeChallenge?.description ??
+                  "Challenges will appear here when published and active."}
               </p>
-              <p className="text-xs text-muted-foreground mb-4">
-                Claim your profile and start building your tier.
-              </p>
-              <button className="btn-primary text-xs w-full py-2.5">
-                Claim your Tierd.
-              </button>
-            </motion.div>
+              <div className="flex items-center justify-between text-[11px] mb-4">
+                <span className="font-mono-jb text-orange font-bold">
+                  +{activeChallenge?.rewardPoints ?? 0} PTS
+                </span>
+                <span className="font-mono-jb text-muted-ink">
+                  {activeChallenge
+                    ? `ends in ${formatTimeLeft(activeChallenge.endsAt)}`
+                    : "no timer"}
+                </span>
+              </div>
+              <Link
+                to="/challenges"
+                className="block w-full text-center rounded-full bg-cream text-ink font-mono-jb text-[12px] font-bold px-4 py-2.5 shadow-press hover:translate-y-px transition-transform"
+              >
+                join challenge →
+              </Link>
+            </div>
           </div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );
 };
 
 export default LiveSection;
-

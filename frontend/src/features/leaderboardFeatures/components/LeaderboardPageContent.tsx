@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 
 import Navbar from "../../../components/Navbar";
 import Footer from "../../../components/Footer";
-import { LeaderboardMotif } from "../../../components/PageBackgroundMotif";
 import { useAuth } from "../../authFeatures/AuthProvider";
 import { useGlobalLeaderboardQuery } from "../../rankingFeatures/useRankingData";
 import type { LeaderboardEntry } from "../../../services/rankingService";
@@ -56,8 +55,7 @@ const LeaderboardPageContent = () => {
     currentUser && developers[0] ? developers[0].score - currentUser.score : null;
 
   return (
-    <div className="min-h-screen bg-background text-cream font-grot relative">
-      <LeaderboardMotif />
+    <div className="min-h-screen bg-ink text-cream font-grot relative">
       <Navbar />
 
       <div className="section-container pt-24 pb-16 relative">
@@ -138,7 +136,7 @@ const LeaderboardPageContent = () => {
           )}
         </motion.header>
 
-        <div className="flex items-center justify-between gap-6 flex-wrap mb-7">
+        <div className="flex items-center justify-between gap-6 flex-wrap mb-14">
           <div className="flex items-center gap-2 flex-wrap">
             <MonoCaption tone="muted" className="mr-1.5">
               FILTER:
@@ -177,7 +175,7 @@ const LeaderboardPageContent = () => {
         </div>
 
         {hasPodium && (
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_1.15fr_1fr] gap-4 items-end mb-28">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1.15fr_1fr] gap-4 items-end mb-14">
             <PodiumSlot dev={top3[1]} place={2} isYou={top3[1].profileId === userId} />
             <PodiumSlot dev={top3[0]} place={1} isYou={top3[0].profileId === userId} />
             <PodiumSlot dev={top3[2]} place={3} isYou={top3[2].profileId === userId} />
@@ -290,10 +288,10 @@ function PodiumCard({
     <Sticker
       color={isFirst ? "orange" : place === 2 ? "cream" : "peach"}
       tilt={tilt}
-      padding="md"
+      padding="lg"
       radius="xl"
       className={cn(
-        "h-[200px] flex flex-col justify-between overflow-hidden",
+        "h-[200px] flex flex-col justify-between",
         isFirst && "h-[230px] shadow-glow-orange",
       )}
     >

@@ -9,7 +9,7 @@ import FooterCTA from "../components/FooterCTA";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-ink text-cream font-grot relative overflow-hidden">
       <Navbar />
       <HeroSection />
       <LiveSection />

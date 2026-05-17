@@ -1,70 +1,73 @@
-﻿import { motion } from "framer-motion";
-import { Search } from "lucide-react";
+import {
+  Doodle,
+  MonoCaption,
+  ScribbleUnderline,
+} from "../../../components/tierd";
 
 type ExploreHeaderProps = {
   showSearchResults: boolean;
   profilesCount: number;
   postsCount: number;
-  searchQuery: string;
-  onSearchQueryChange: (value: string) => void;
-  searchLoading: boolean;
 };
 
+/**
+ * Title block + stats chips. The search bar lives in a separate sticky
+ * wrapper at the page level so it stays pinned while the page scrolls.
+ */
 export function ExploreHeader({
   showSearchResults,
   profilesCount,
   postsCount,
-  searchQuery,
-  onSearchQueryChange,
-  searchLoading,
 }: ExploreHeaderProps) {
   return (
-    <div className="pt-24 pb-0">
-      <div className="section-container">
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-5"
-        >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-ember/65">
-                Developer discovery
-              </p>
-              <h1 className="font-title font-bold text-3xl sm:text-4xl tracking-tight text-foreground leading-none">
-                Explore<span className="text-ember">.</span>
-              </h1>
-              <p className="text-muted-foreground/60 text-sm mt-1.5 max-w-md">
-                Discover builders, see what's shipping, and find who's worth
-                following.
-              </p>
-            </div>
-            {!showSearchResults && (
-              <div className="flex gap-2 self-start sm:self-auto">
-                <span className="rounded-full border border-border/30 bg-muted/10 px-3 py-1 text-xs text-muted-foreground/55">
-                  {profilesCount} builders
-                </span>
-                <span className="rounded-full border border-border/30 bg-muted/10 px-3 py-1 text-xs text-muted-foreground/55">
-                  {postsCount} posts
-                </span>
-              </div>
-            )}
+    <div className="pt-28 pb-0 relative">
+      <Doodle.Asterisk
+        size={42}
+        className="absolute top-16 right-[28%] text-orange/60 hidden xl:block pointer-events-none"
+        aria-hidden
+      />
+      <Doodle.Dots
+        rows={4}
+        cols={8}
+        className="absolute top-24 right-12 text-cream/25 hidden lg:block pointer-events-none"
+        aria-hidden
+      />
+      <Doodle.Sparkle
+        size={26}
+        className="absolute top-[130px] right-[200px] text-tape hidden xl:block pointer-events-none"
+        aria-hidden
+      />
+
+      <div className="section-container relative">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-6">
+          <div>
+            <MonoCaption tone="orange" className="mb-3">
+              ◢ developer discovery
+            </MonoCaption>
+            <h1 className="font-boldonse text-[56px] sm:text-[80px] lg:text-[96px] leading-[0.95] tracking-[-0.02em] text-cream">
+              explore<span className="text-orange">.</span>
+            </h1>
+            <p className="font-mono-jb text-[13px] sm:text-[14px] text-cream/70 mt-4 max-w-[520px] leading-[1.6]">
+              Discover builders, see what's shipping, and find who's worth
+              following. Today is a good day to ship something.
+            </p>
           </div>
 
-          <div className="mt-4 flex items-center gap-3 rounded-xl border border-border/30 bg-muted/5 px-4 py-3">
-            <Search size={15} className="text-muted-foreground/40 shrink-0" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => onSearchQueryChange(e.target.value)}
-              placeholder="Search developers by name or handle..."
-              className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground/35 outline-none flex-1"
-            />
-            {searchLoading && (
-              <div className="w-4 h-4 border-2 border-ember/40 border-t-ember rounded-full animate-spin" />
-            )}
-          </div>
-        </motion.div>
+          {!showSearchResults && (
+            <div className="flex flex-col items-start sm:items-end gap-2">
+              <div className="flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-cream text-ink font-mono-jb text-[11px] font-bold px-3 py-1.5 shadow-press">
+                  <Doodle.Plus size={10} className="text-ink" />
+                  {profilesCount} builders
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-soft text-ink font-mono-jb text-[11px] font-bold px-3 py-1.5 shadow-press">
+                  {postsCount} posts · live
+                </span>
+              </div>
+              <ScribbleUnderline w={180} className="text-orange" />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -65,6 +65,16 @@ export type ActiveChallenge = {
   participantsCount: number;
 };
 
+export type TopChallenger = {
+  rank: number;
+  profileId: string;
+  username: string;
+  fullName: string;
+  avatarUrl: string | null;
+  winsCount: number;
+  totalAwardedPoints: number;
+};
+
 const strategies: ScoringStrategy[] = [
   new GitHubScoringStrategy(),
   new ChallengeScoringStrategy(),
@@ -178,6 +188,26 @@ export const rankingService = {
     const totalScore = breakdown.reduce((sum, item) => sum + item.score, 0);
 
     return { userId, totalScore, breakdown };
+  },
+
+  async getTopChallengers(limit = 5): Promise<TopChallenger[]> {
+    const rows = await rankingRepository.fetchTopChallengers(limit);
+    return rows
+      .filter((row): row is typeof row & { profile_id: string } =>
+        Boolean(row.profile_id),
+      )
+      .map((row, i) => {
+        const username = row.username ?? "builder";
+        return {
+          rank: row.challenger_rank ?? i + 1,
+          profileId: row.profile_id,
+          username,
+          fullName: row.full_name ?? username,
+          avatarUrl: row.avatar_url,
+          winsCount: row.wins_count ?? 0,
+          totalAwardedPoints: row.total_awarded_points ?? 0,
+        };
+      });
   },
 
   async getActiveFeaturedChallenge(): Promise<ActiveChallenge | null> {

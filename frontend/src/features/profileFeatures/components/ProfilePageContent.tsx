@@ -19,10 +19,7 @@ import {
   useUserPostsInfiniteQuery,
 } from "../../exploreFeatures/useExplorePageData";
 import type { FeedPost, PostComment } from "../../exploreFeatures/exploreTypes";
-import {
-  useProfileEvaluationQuery,
-  useProfileProgressQuery,
-} from "../../rankingFeatures/useRankingData";
+import { useProfileProgressQuery } from "../../rankingFeatures/useRankingData";
 import {
   useFollowStateQuery,
   useFollowersListQuery,
@@ -42,6 +39,10 @@ import {
 } from "./ProfileDialogs";
 
 type ProfileAuthMode = "login" | "signup";
+
+/** Pull the last 7-day slice out of the rolling heatmap for the right-rail bars. */
+const lastWeekActivity = (data: number[][]): number[] =>
+  data[data.length - 1] ?? Array(7).fill(0);
 
 /* Stable mock heatmap data, generated once per module load. */
 const heatmapData = generateHeatmapData();
@@ -95,9 +96,7 @@ const ProfilePageContent = () => {
 
   const userPostsQuery = useUserPostsInfiniteQuery(authUserId, resolvedUserId);
   const profileProgressQuery = useProfileProgressQuery(resolvedUserId);
-  const profileEvaluationQuery = useProfileEvaluationQuery(resolvedUserId);
   const profileProgress = profileProgressQuery.data ?? null;
-  const profileEvaluation = profileEvaluationQuery.data ?? null;
   const followStateQuery = useFollowStateQuery(
     authUserId,
     resolvedUserId,
@@ -220,9 +219,7 @@ const ProfilePageContent = () => {
   const followingCount = profileProgress?.followingCount ?? 0;
   const weeklyScore = profileProgress?.weeklyScore ?? 0;
   const globalPercentile = profileProgress?.globalPercentile ?? 100;
-  const contributionsLabel = profileEvaluation
-    ? `${profileEvaluation.totalScore.toLocaleString()} signals scored in eval`
-    : "Contributions over the last year";
+  const weekActivity = useMemo(() => lastWeekActivity(heatmapData), []);
 
   const [topTech, setTopTech] = useState<string[]>([
     "React",
@@ -266,7 +263,7 @@ const ProfilePageContent = () => {
         <motion.section
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="section-container mt-5 mb-10"
+          className="section-container mt-5"
         >
           <ProfileBanner isOwn={isOwnProfile} />
 
@@ -284,74 +281,77 @@ const ProfilePageContent = () => {
             followPending={followMutation.isPending}
             onEdit={() => setEditOpen(true)}
             onToggleFollow={handleToggleFollow}
-            tierCode={currentTierCode}
-            tierName={currentTierName}
-            currentScore={currentScore}
-            nextTierName={nextTierName}
-            pointsToNextTier={pointsToNextTier}
-            progressPct={progressToNext}
-            weeklyScore={weeklyScore}
-            globalPercentile={globalPercentile}
-            postsLabel={postsCountLabel}
-            followersCount={followersCount}
-            followingCount={followingCount}
-            onOpenFollowers={() => setFollowersOpen(true)}
-            onOpenFollowing={() => setFollowingOpen(true)}
-            topTech={topTech}
-            onEditTech={() => setTechOpen(true)}
           />
-
-          <div className="mt-8">
-            <ProfileSecondary
-              heatmapData={heatmapData}
-              contributionsLabel={contributionsLabel}
-            />
-          </div>
         </motion.section>
 
-        {/* Posts + sticky projects/achievements rail */}
-        <div className="section-container pb-20">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
-            <main className="lg:col-span-7 min-w-0">
-              <div className="mb-5 flex items-end justify-between gap-4 border-b border-dashed border-cream/10 pb-4">
-                <div className="flex items-center gap-2.5">
-                  <Doodle.Pulse size={14} className="text-orange" />
-                  <MonoCaption tone="cream">// posts</MonoCaption>
-                  <span className="font-mono-jb text-[10px] text-muted-ink uppercase tracking-[0.08em]">
-                    {userPostsQuery.hasNextPage
-                      ? `${userPosts.length} shown · more below`
-                      : `${userPosts.length} ${userPosts.length === 1 ? "post" : "posts"}`}
-                  </span>
-                </div>
-              </div>
-
-              <PostsList
-                isPending={userPostsQuery.isPending}
-                isOwnProfile={isOwnProfile}
-                userPosts={userPosts}
-                openCommentsPostId={openCommentsPostId}
-                commentsFetchPostId={commentsFetchPostId}
-                commentsForActivePost={commentsForActivePost}
-                commentsLoadingActive={commentsLoadingActive}
-                commentDraft={commentDraft}
-                commentMutationPending={commentMutation.isPending}
-                commentMutationPostId={commentMutation.variables?.postId}
-                onToggleLike={handleToggleLike}
-                onToggleComments={handleToggleComments}
-                onChangeCommentDraft={setCommentDraft}
-                onSubmitComment={handleSubmitComment}
-                onOpenMediaLightbox={handleOpenMediaLightbox}
-                hasNextPage={Boolean(userPostsQuery.hasNextPage)}
-                isFetchingNextPage={userPostsQuery.isFetchingNextPage}
-                onFetchNext={() => void userPostsQuery.fetchNextPage()}
+        {/* Main grid — LEFT: stats + badges + projects + posts.
+            RIGHT (sticky): tier + activity + tech + endorsement. */}
+        <div className="section-container pb-20 mt-9">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-7 items-start">
+            <main className="lg:col-span-7 min-w-0 space-y-6">
+              <ProfileSecondary
+                postsLabel={postsCountLabel}
+                followersCount={followersCount}
+                followingCount={followingCount}
+                currentScore={currentScore}
+                onOpenFollowers={() => setFollowersOpen(true)}
+                onOpenFollowing={() => setFollowingOpen(true)}
               />
+
+              <section>
+                <div className="mb-4 flex items-end justify-between gap-4 border-b border-dashed border-cream/10 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <Doodle.Pulse size={14} className="text-orange" />
+                    <MonoCaption tone="cream">// posts</MonoCaption>
+                    <span className="font-mono-jb text-[10px] text-muted-ink uppercase tracking-[0.08em]">
+                      {userPostsQuery.hasNextPage
+                        ? `${userPosts.length} shown · more below`
+                        : `${userPosts.length} ${userPosts.length === 1 ? "post" : "posts"}`}
+                    </span>
+                  </div>
+                </div>
+
+                <PostsList
+                  isPending={userPostsQuery.isPending}
+                  isOwnProfile={isOwnProfile}
+                  userPosts={userPosts}
+                  openCommentsPostId={openCommentsPostId}
+                  commentsFetchPostId={commentsFetchPostId}
+                  commentsForActivePost={commentsForActivePost}
+                  commentsLoadingActive={commentsLoadingActive}
+                  commentDraft={commentDraft}
+                  commentMutationPending={commentMutation.isPending}
+                  commentMutationPostId={commentMutation.variables?.postId}
+                  onToggleLike={handleToggleLike}
+                  onToggleComments={handleToggleComments}
+                  onChangeCommentDraft={setCommentDraft}
+                  onSubmitComment={handleSubmitComment}
+                  onOpenMediaLightbox={handleOpenMediaLightbox}
+                  hasNextPage={Boolean(userPostsQuery.hasNextPage)}
+                  isFetchingNextPage={userPostsQuery.isFetchingNextPage}
+                  onFetchNext={() => void userPostsQuery.fetchNextPage()}
+                />
+              </section>
             </main>
 
             <aside
-              className="lg:col-span-5 min-w-0 lg:sticky lg:top-[140px] self-start"
-              aria-label="Projects and achievements"
+              className="lg:col-span-5 min-w-0 lg:sticky lg:top-[120px] self-start"
+              aria-label="Tier, activity, stack, and endorsements"
             >
-              <ProfileStickyRail />
+              <ProfileStickyRail
+                tierCode={currentTierCode}
+                tierName={currentTierName}
+                currentScore={currentScore}
+                nextTierName={nextTierName}
+                pointsToNextTier={pointsToNextTier}
+                progressPct={progressToNext}
+                weeklyScore={weeklyScore}
+                globalPercentile={globalPercentile}
+                topTech={topTech}
+                onEditTech={() => setTechOpen(true)}
+                isOwnProfile={isOwnProfile}
+                weekActivity={weekActivity}
+              />
             </aside>
           </div>
         </div>

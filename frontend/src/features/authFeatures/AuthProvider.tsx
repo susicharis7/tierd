@@ -121,12 +121,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = onAuthStateChange((event, sess) => {
       if (!mounted) return;
-      if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") return;
+      if (event === "TOKEN_REFRESHED") return;
 
       setSession(sess);
       void syncProfile(sess?.user?.id ?? null);
 
-      if (event === "SIGNED_IN" && sess) {
+      // SIGNED_IN: initial OAuth sign-in or password login.
+      // USER_UPDATED: fires after linkIdentity completes — same persistence path,
+      //   since the session now carries the newly linked identity + its provider_token.
+      if ((event === "SIGNED_IN" || event === "USER_UPDATED") && sess) {
         void persistOAuthIdentity(sess);
       }
     });

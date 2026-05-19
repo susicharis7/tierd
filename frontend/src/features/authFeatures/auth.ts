@@ -71,6 +71,58 @@ export async function signInWithOAuthStrategy(strategy: AuthProviderStrategy) {
   if (error) throw error;
 }
 
+/**
+ * Adds an OAuth identity to the *already signed-in* user. Used from the
+ * profile page to attach GitHub/LinkedIn to an existing Tierd account.
+ *
+ * Requires "Allow manual linking" to be enabled in Supabase Auth settings.
+ * Redirects through the provider — completion is handled by AuthProvider's
+ * onAuthStateChange listener (USER_UPDATED event).
+ */
+export async function linkProviderWithStrategy(strategy: AuthProviderStrategy) {
+  if (!isSupabaseConfigured) throw new Error(NOT_CONFIGURED_MSG);
+  authLog("link:start", { provider: strategy.supabaseProvider });
+
+  const { data, error } = await supabase.auth.linkIdentity({
+    provider: strategy.supabaseProvider,
+    options: {
+      scopes: strategy.scopes,
+      redirectTo: window.location.origin,
+    },
+  });
+
+  authLog("link:redirect", { error, hasUrl: !!data?.url });
+  if (error) throw error;
+}
+
+/**
+ * Removes an OAuth identity from the current user. Supabase requires at
+ * least one identity to remain — attempting to unlink the last one returns
+ * an error which we surface to the caller for UI handling.
+ */
+export async function unlinkProviderWithStrategy(strategy: AuthProviderStrategy) {
+  if (!isSupabaseConfigured) throw new Error(NOT_CONFIGURED_MSG);
+  authLog("unlink:start", { provider: strategy.supabaseProvider });
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) throw new Error("You must be signed in to unlink a provider.");
+
+  const identity = session.user.identities?.find(
+    (i) => i.provider === strategy.supabaseProvider,
+  );
+
+  if (!identity) {
+    throw new Error(`No ${strategy.label.replace(/^Continue with /, "")} account is linked.`);
+  }
+
+  const { error } = await supabase.auth.unlinkIdentity(identity);
+  authLog("unlink:result", { error });
+  if (error) throw error;
+}
+
 export async function logout() {
   if (!isSupabaseConfigured) return;
   authLog("logout:start");

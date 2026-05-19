@@ -28,4 +28,17 @@ export const oauthTokenRepository = {
 
     if (error) throw error;
   },
+
+  async removeByProvider(
+    profileId: string,
+    provider: ExternalAccountProvider,
+  ): Promise<void> {
+    const { error } = await supabase
+      .from("oauth_provider_tokens")
+      .delete()
+      .eq("profile_id", profileId)
+      .eq("provider", provider);
+
+    if (error) throw error;
+  },
 };

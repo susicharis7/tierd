@@ -21,6 +21,9 @@ app.get("/", (req, res) => {
 const healthRoutes = require("./routes/health");
 app.use("/api", healthRoutes);
 
+const syncRoutes = require("./routes/sync");
+app.use("/api/sync", syncRoutes);
+
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

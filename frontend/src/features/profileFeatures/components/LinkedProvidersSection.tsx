@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useAuth } from "../../authFeatures/AuthProvider";
 import { useLinkedProviders } from "../../authFeatures/useLinkedProviders";
+import { useGithubSync } from "../../authFeatures/useGithubSync";
+import { GithubSyncError } from "../../../repositories/githubSyncRepository";
+import { toast } from "../../../components/ui/sonner";
 import type { AuthProviderStrategy } from "../../../strategies/auth";
 
 /**
@@ -13,8 +16,34 @@ import type { AuthProviderStrategy } from "../../../strategies/auth";
 export function LinkedProvidersSection() {
   const { session } = useAuth();
   const { strategies, linked, loading, error, link, unlink } = useLinkedProviders();
+  const { sync: syncGithub, syncing: githubSyncing } = useGithubSync();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  const handleSyncGithub = async () => {
+    try {
+      const result = await syncGithub();
+      toast.success(
+        `Synced ${result.daysSynced} days of GitHub contributions${
+          result.githubLogin ? ` for @${result.githubLogin}` : ""
+        }.`,
+      );
+    } catch (err) {
+      if (err instanceof GithubSyncError) {
+        if (err.code === "github_token_invalid") {
+          toast.error("GitHub rejected the stored token. Reconnect GitHub to fix.");
+        } else if (err.code === "github_not_linked") {
+          toast.error("Link your GitHub account before syncing.");
+        } else if (err.code === "backend_unreachable") {
+          toast.error("Couldn't reach the sync service. Is the backend running?");
+        } else {
+          toast.error(err.message);
+        }
+      } else {
+        toast.error(err instanceof Error ? err.message : "Sync failed.");
+      }
+    }
+  };
 
   // Supabase refuses to unlink the last identity — disable Unlink proactively
   // so the user doesn't have to discover the constraint by clicking.
@@ -108,19 +137,31 @@ export function LinkedProvidersSection() {
               </div>
 
               {isLinked ? (
-                <button
-                  type="button"
-                  disabled={isPending || loading || unlinkBlocked}
-                  onClick={() => handleUnlink(strategy)}
-                  title={
-                    unlinkBlocked
-                      ? "This is your only sign-in method. Add another provider first."
-                      : undefined
-                  }
-                  className="shrink-0 text-xs font-medium text-muted-foreground hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isPending ? "Unlinking…" : "Unlink"}
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  {strategy.id === "github" && (
+                    <button
+                      type="button"
+                      disabled={githubSyncing || isPending || loading}
+                      onClick={handleSyncGithub}
+                      className="rounded-md border border-border/60 px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-muted/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {githubSyncing ? "Syncing…" : "Sync"}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={isPending || loading || unlinkBlocked}
+                    onClick={() => handleUnlink(strategy)}
+                    title={
+                      unlinkBlocked
+                        ? "This is your only sign-in method. Add another provider first."
+                        : undefined
+                    }
+                    className="text-xs font-medium text-muted-foreground hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isPending ? "Unlinking…" : "Unlink"}
+                  </button>
+                </div>
               ) : (
                 <button
                   type="button"

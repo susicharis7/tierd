@@ -14,39 +14,75 @@ import {
   getSession,
   logout as doLogout,
   onAuthStateChange,
+  PENDING_OAUTH_PROVIDER_KEY,
 } from "./auth";
 import { findStrategyBySupabaseProvider } from "../../strategies/auth";
 import { externalAccountRepository } from "../../repositories/externalAccountRepository";
 import { oauthTokenRepository } from "../../repositories/oauthTokenRepository";
 
+/**
+ * Walks every OAuth identity attached to the current Supabase user and mirrors
+ * it into our `profile_external_accounts` table. Iterating identities (rather
+ * than reading `app_metadata.provider`) is critical for the LINK flow: when a
+ * user with an existing email/password account links GitHub, `app_metadata.provider`
+ * stays as "email" and the new identity is only visible inside `user.identities`.
+ *
+ * Idempotent — safe to run on SIGNED_IN, USER_UPDATED, and INITIAL_SESSION.
+ *
+ * `provider_token` is only present on the OAuth callback that just completed,
+ * and Supabase doesn't tell us which provider it belongs to. We stash the
+ * intended provider in sessionStorage before the redirect and read it back here.
+ */
 async function persistOAuthIdentity(session: Session) {
-  const supabaseProvider = session.user.app_metadata?.provider;
-  const strategy = findStrategyBySupabaseProvider(supabaseProvider);
-  if (!strategy) return;
+  const identities = session.user.identities ?? [];
 
-  const identity = strategy.extractIdentity(session);
-  if (!identity) return;
+  for (const identity of identities) {
+    const strategy = findStrategyBySupabaseProvider(identity.provider);
+    if (!strategy) continue;
 
-  try {
-    await externalAccountRepository.upsertFromOAuth(session.user.id, identity);
-  } catch (err) {
-    console.error("[AuthProvider] external account upsert failed", err);
+    const extracted = strategy.extractIdentity(session);
+    if (!extracted) continue;
+
+    try {
+      await externalAccountRepository.upsertFromOAuth(session.user.id, extracted);
+    } catch (err) {
+      console.error("[AuthProvider] external account upsert failed", err, {
+        provider: identity.provider,
+      });
+    }
   }
 
-  // provider_token is only present on the initial OAuth callback session;
-  // page reloads restore the session without it.
-  if (session.provider_token) {
+  if (!session.provider_token) return;
+
+  let pendingProviderId: string | null = null;
+  try {
+    pendingProviderId = sessionStorage.getItem(PENDING_OAUTH_PROVIDER_KEY);
+  } catch {
+    // sessionStorage may be unavailable; fall through to app_metadata fallback.
+  }
+
+  const tokenStrategy =
+    findStrategyBySupabaseProvider(pendingProviderId) ??
+    findStrategyBySupabaseProvider(session.user.app_metadata?.provider);
+
+  if (tokenStrategy) {
     try {
       await oauthTokenRepository.upsert({
         profileId: session.user.id,
-        provider: identity.provider,
+        provider: tokenStrategy.id,
         accessToken: session.provider_token,
         refreshToken: session.provider_refresh_token ?? null,
-        scopes: strategy.scopes,
+        scopes: tokenStrategy.scopes,
       });
     } catch (err) {
       console.error("[AuthProvider] oauth token persist failed", err);
     }
+  }
+
+  try {
+    sessionStorage.removeItem(PENDING_OAUTH_PROVIDER_KEY);
+  } catch {
+    // ignore
   }
 }
 
@@ -129,7 +165,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // SIGNED_IN: initial OAuth sign-in or password login.
       // USER_UPDATED: fires after linkIdentity completes — same persistence path,
       //   since the session now carries the newly linked identity + its provider_token.
-      if ((event === "SIGNED_IN" || event === "USER_UPDATED") && sess) {
+      // INITIAL_SESSION: covers the case where a page refresh follows a link flow
+      //   whose USER_UPDATED event was missed; upsert is idempotent so the extra
+      //   work is harmless.
+      if (
+        (event === "SIGNED_IN" ||
+          event === "USER_UPDATED" ||
+          event === "INITIAL_SESSION") &&
+        sess
+      ) {
         void persistOAuthIdentity(sess);
       }
     });

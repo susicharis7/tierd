@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "../../authFeatures/AuthProvider";
 import { useLinkedProviders } from "../../authFeatures/useLinkedProviders";
 import type { AuthProviderStrategy } from "../../../strategies/auth";
 
@@ -10,9 +11,22 @@ import type { AuthProviderStrategy } from "../../../strategies/auth";
  * Styling is intentionally minimal — restyle to match your profile design.
  */
 export function LinkedProvidersSection() {
+  const { session } = useAuth();
   const { strategies, linked, loading, error, link, unlink } = useLinkedProviders();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // Supabase refuses to unlink the last identity — disable Unlink proactively
+  // so the user doesn't have to discover the constraint by clicking.
+  const authIdentityCount = session?.user?.identities?.length ?? 0;
+  const wouldOrphan = authIdentityCount <= 1;
+
+  const humanizeError = (raw: string): string => {
+    if (/at least 1 identity/i.test(raw)) {
+      return "Can't unlink — this is your only sign-in method. Add another provider (or set a password) first.";
+    }
+    return raw;
+  };
 
   const handleLink = async (strategy: AuthProviderStrategy) => {
     setActionError(null);
@@ -22,7 +36,7 @@ export function LinkedProvidersSection() {
       // Browser will redirect to the provider; nothing else to do here.
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to start link flow.";
-      setActionError(message);
+      setActionError(humanizeError(message));
       setPendingId(null);
     }
   };
@@ -34,7 +48,7 @@ export function LinkedProvidersSection() {
       await unlink(strategy);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to unlink.";
-      setActionError(message);
+      setActionError(humanizeError(message));
     } finally {
       setPendingId(null);
     }
@@ -49,9 +63,7 @@ export function LinkedProvidersSection() {
         </p>
       </header>
 
-      {error && (
-        <p className="text-xs text-red-400">{error}</p>
-      )}
+      {error && <p className="text-xs text-red-400">{error}</p>}
 
       <ul className="space-y-2">
         {strategies.map((strategy) => {
@@ -59,6 +71,7 @@ export function LinkedProvidersSection() {
           const isLinked = !!row;
           const isPending = pendingId === strategy.id;
           const displayName = strategy.label.replace(/^Continue with /, "");
+          const unlinkBlocked = isLinked && wouldOrphan;
 
           return (
             <li
@@ -97,9 +110,14 @@ export function LinkedProvidersSection() {
               {isLinked ? (
                 <button
                   type="button"
-                  disabled={isPending || loading}
+                  disabled={isPending || loading || unlinkBlocked}
                   onClick={() => handleUnlink(strategy)}
-                  className="shrink-0 text-xs font-medium text-muted-foreground hover:text-red-400 transition-colors disabled:opacity-50"
+                  title={
+                    unlinkBlocked
+                      ? "This is your only sign-in method. Add another provider first."
+                      : undefined
+                  }
+                  className="shrink-0 text-xs font-medium text-muted-foreground hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isPending ? "Unlinking…" : "Unlink"}
                 </button>
@@ -118,9 +136,7 @@ export function LinkedProvidersSection() {
         })}
       </ul>
 
-      {actionError && (
-        <p className="text-xs text-red-400">{actionError}</p>
-      )}
+      {actionError && <p className="text-xs text-red-400">{actionError}</p>}
     </section>
   );
 }

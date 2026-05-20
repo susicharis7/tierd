@@ -40,10 +40,18 @@ export interface UseLinkedProvidersResult {
  * provider stays a one-file change.
  */
 export function useLinkedProviders(): UseLinkedProvidersResult {
-  const { userId } = useAuth();
+  const { userId, session } = useAuth();
   const [linked, setLinked] = useState<LinkedProviderMap>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // When AuthProvider sees USER_UPDATED (e.g. after a link), the session is
+  // replaced and identities change — re-fetch so the UI flips from "Connect"
+  // to "Unlink" without a page reload.
+  const identitySignature = session?.user?.identities
+    ?.map((i) => i.provider)
+    .sort()
+    .join(",");
 
   const refresh = useCallback(async () => {
     if (!userId) {
@@ -72,38 +80,27 @@ export function useLinkedProviders(): UseLinkedProvidersResult {
 
   useEffect(() => {
     void refresh();
-  }, [refresh]);
+  }, [refresh, identitySignature]);
 
+  // Link/unlink errors bubble up to the caller for transient UI handling;
+  // we don't store them on the hook so a one-off action failure doesn't
+  // bleed into the persistent error state that's reserved for read failures.
   const link = useCallback(async (strategy: AuthProviderStrategy) => {
-    setError(null);
-    try {
-      // Redirects away — completion handled by AuthProvider on USER_UPDATED.
-      await linkProviderWithStrategy(strategy);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : `Failed to link ${strategy.id}.`;
-      setError(message);
-      throw err;
-    }
+    // Redirects away — completion handled by AuthProvider on USER_UPDATED.
+    await linkProviderWithStrategy(strategy);
   }, []);
 
   const unlink = useCallback(
     async (strategy: AuthProviderStrategy) => {
       if (!userId) throw new Error("Not signed in.");
-      setError(null);
-      try {
-        await unlinkProviderWithStrategy(strategy);
-        // Best-effort cleanup of stored token + external account row.
-        // Supabase will keep the auth identity gone regardless; we just tidy our tables.
-        await Promise.allSettled([
-          oauthTokenRepository.removeByProvider(userId, strategy.id),
-          externalAccountRepository.removeByProvider(userId, strategy.id),
-        ]);
-        await refresh();
-      } catch (err) {
-        const message = err instanceof Error ? err.message : `Failed to unlink ${strategy.id}.`;
-        setError(message);
-        throw err;
-      }
+      await unlinkProviderWithStrategy(strategy);
+      // Best-effort cleanup of stored token + external account row.
+      // Supabase will keep the auth identity gone regardless; we just tidy our tables.
+      await Promise.allSettled([
+        oauthTokenRepository.removeByProvider(userId, strategy.id),
+        externalAccountRepository.removeByProvider(userId, strategy.id),
+      ]);
+      await refresh();
     },
     [userId, refresh],
   );

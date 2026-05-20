@@ -27,6 +27,7 @@ import {
   useToggleFollowMutation,
 } from "../useProfileSocialData";
 import type { TechOption } from "../profileData";
+import { LinkedProvidersSection } from "./LinkedProvidersSection";
 import ProfileBanner from "./ProfileBanner";
 import ProfileIdentityCard from "./ProfileIdentityCard";
 import ProfileSecondary from "./ProfileSecondary";
@@ -297,6 +298,12 @@ const ProfilePageContent = () => {
                 onOpenFollowers={() => setFollowersOpen(true)}
                 onOpenFollowing={() => setFollowingOpen(true)}
               />
+
+              {isOwnProfile && (
+                <div className="rounded-[18px] border border-ink-line bg-ink-2 p-5">
+                  <LinkedProvidersSection />
+                </div>
+              )}
 
               <section>
                 <div className="mb-4 flex items-end justify-between gap-4 border-b border-dashed border-cream/10 pb-3">

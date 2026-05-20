@@ -55,9 +55,22 @@ export async function login(logInput: LoginInput) {
   return data;
 }
 
+/** sessionStorage key recording which provider an OAuth callback belongs to. */
+export const PENDING_OAUTH_PROVIDER_KEY = "tierd.pendingOAuthProvider";
+
+function recordPendingOAuthProvider(strategy: AuthProviderStrategy) {
+  try {
+    sessionStorage.setItem(PENDING_OAUTH_PROVIDER_KEY, strategy.supabaseProvider);
+  } catch {
+    // Some browsers throw on sessionStorage access (e.g., privacy mode).
+  }
+}
+
 export async function signInWithOAuthStrategy(strategy: AuthProviderStrategy) {
   if (!isSupabaseConfigured) throw new Error(NOT_CONFIGURED_MSG);
   authLog("oauth:start", { provider: strategy.supabaseProvider });
+
+  recordPendingOAuthProvider(strategy);
 
   const { error } = await supabase.auth.signInWithOAuth({
     provider: strategy.supabaseProvider,
@@ -83,6 +96,8 @@ export async function linkProviderWithStrategy(strategy: AuthProviderStrategy) {
   if (!isSupabaseConfigured) throw new Error(NOT_CONFIGURED_MSG);
   authLog("link:start", { provider: strategy.supabaseProvider });
 
+  recordPendingOAuthProvider(strategy);
+
   const { data, error } = await supabase.auth.linkIdentity({
     provider: strategy.supabaseProvider,
     options: {
@@ -99,6 +114,11 @@ export async function linkProviderWithStrategy(strategy: AuthProviderStrategy) {
  * Removes an OAuth identity from the current user. Supabase requires at
  * least one identity to remain — attempting to unlink the last one returns
  * an error which we surface to the caller for UI handling.
+ *
+ * If our app-side row (profile_external_accounts) exists but the matching
+ * auth identity does not — e.g. seed data or a stale row from a connection
+ * revoked outside the app — this resolves successfully so the caller can
+ * still clean up the app-side row.
  */
 export async function unlinkProviderWithStrategy(strategy: AuthProviderStrategy) {
   if (!isSupabaseConfigured) throw new Error(NOT_CONFIGURED_MSG);
@@ -115,7 +135,8 @@ export async function unlinkProviderWithStrategy(strategy: AuthProviderStrategy)
   );
 
   if (!identity) {
-    throw new Error(`No ${strategy.label.replace(/^Continue with /, "")} account is linked.`);
+    authLog("unlink:no-auth-identity", { provider: strategy.supabaseProvider });
+    return;
   }
 
   const { error } = await supabase.auth.unlinkIdentity(identity);

@@ -21,6 +21,7 @@ import {
 import { findStrategyBySupabaseProvider } from "../../strategies/auth";
 import { externalAccountRepository } from "../../repositories/externalAccountRepository";
 import { oauthTokenRepository } from "../../repositories/oauthTokenRepository";
+import { githubSyncRepository } from "../../repositories/githubSyncRepository";
 import { toast } from "../../components/ui/sonner";
 
 /**
@@ -111,6 +112,16 @@ async function persistOAuthIdentity(session: Session) {
     sessionStorage.removeItem(PENDING_OAUTH_PROVIDER_KEY);
   } catch {
     // ignore
+  }
+
+  // Auto-sync GitHub contributions once, right after a fresh GitHub link or
+  // sign-in. We gate on `provider_token` (only present on the callback that
+  // just completed) so this fires once at link time and never on page refresh
+  // or re-hydration. Fire-and-forget — never block the auth flow on it.
+  if (tokenStrategy?.id === "github") {
+    void githubSyncRepository.syncMe().catch((err) => {
+      console.warn("[AuthProvider] auto-sync after GitHub link failed", err);
+    });
   }
 }
 

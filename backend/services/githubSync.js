@@ -58,6 +58,19 @@ async function upsertContributionDays(profileId, days) {
   return rows.length;
 }
 
+async function markExternalAccountSynced(profileId) {
+  // Best-effort — failing this shouldn't fail the sync itself, but log it
+  // so we notice if last_synced_at silently stops updating.
+  const { error } = await supabaseAdmin
+    .from("profile_external_accounts")
+    .update({ last_synced_at: new Date().toISOString() })
+    .eq("profile_id", profileId)
+    .eq("provider", "github");
+  if (error) {
+    console.error("[githubSync] failed to bump last_synced_at", error);
+  }
+}
+
 /**
  * Pulls the GitHub contribution calendar for one profile and writes it into
  * `github_daily_contributions`. Idempotent — re-running just re-upserts the
@@ -81,6 +94,7 @@ async function syncGithubForProfile(profileId) {
   }
 
   const rowsWritten = await upsertContributionDays(profileId, result.days);
+  await markExternalAccountSynced(profileId);
 
   return {
     githubLogin: result.login,

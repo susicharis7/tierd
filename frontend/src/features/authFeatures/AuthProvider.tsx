@@ -10,15 +10,43 @@
 import type { Session } from "@supabase/supabase-js";
 import type { ProfileRow } from "./authTypes";
 import {
+  consumeOAuthCallbackError,
   getProfileByUserId,
   getSession,
   logout as doLogout,
   onAuthStateChange,
   PENDING_OAUTH_PROVIDER_KEY,
+  type OAuthCallbackError,
 } from "./auth";
 import { findStrategyBySupabaseProvider } from "../../strategies/auth";
 import { externalAccountRepository } from "../../repositories/externalAccountRepository";
 import { oauthTokenRepository } from "../../repositories/oauthTokenRepository";
+import { toast } from "../../components/ui/sonner";
+
+/**
+ * Turns a Supabase OAuth callback error into a sentence we'd actually want a
+ * user to read. The headline case is `identity_already_exists`, which fires
+ * when a user tries to link a GitHub/LinkedIn account that's already attached
+ * to a *different* Tierd user — Supabase's default message ("Identity is
+ * already linked to another user") is true but unhelpful out of context.
+ */
+function humanizeCallbackError(err: OAuthCallbackError): string {
+  const strategy = findStrategyBySupabaseProvider(err.pendingProvider);
+  const providerName = strategy?.label.replace(/^Continue with /, "") ?? "account";
+
+  const isAlreadyLinked =
+    /identity_already_exists/i.test(err.errorCode) ||
+    /already.linked.to.another.user/i.test(err.errorDescription);
+  if (isAlreadyLinked) {
+    return `That ${providerName} account is already linked to another Tierd account. Sign in with that one, or unlink it there first.`;
+  }
+
+  if (/access_denied/i.test(err.errorCode)) {
+    return `${providerName} sign-in was cancelled.`;
+  }
+
+  return err.errorDescription || `Couldn't complete ${providerName} sign-in.`;
+}
 
 /**
  * Walks every OAuth identity attached to the current Supabase user and mirrors
@@ -138,6 +166,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // Surface OAuth callback errors (e.g. linkIdentity rejected because the
+    // identity belongs to another Tierd user) before anything else runs.
+    // Must happen on mount because Supabase put the info in the URL hash and
+    // the hash gets cleared either by us here or by detectSessionInUrl below.
+    const callbackError = consumeOAuthCallbackError();
+    if (callbackError) {
+      toast.error(humanizeCallbackError(callbackError));
+    }
+
     let mounted = true;
 
     const init = async () => {

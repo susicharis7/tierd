@@ -66,6 +66,55 @@ function recordPendingOAuthProvider(strategy: AuthProviderStrategy) {
   }
 }
 
+export type OAuthCallbackError = {
+  errorCode: string;
+  errorDescription: string;
+  /** supabaseProvider id (e.g. "github", "linkedin_oidc") if we set the marker. */
+  pendingProvider: string | null;
+};
+
+/**
+ * Reads (and clears) an OAuth callback error that Supabase places in the URL
+ * hash when a sign-in or link flow is rejected. The most common case we care
+ * about: linkIdentity fails with `identity_already_exists` because the OAuth
+ * account is already attached to a different Tierd user. Without this, the
+ * browser silently returns to `/` and the user has no idea what happened.
+ *
+ * Also consumes the pending-provider marker, but only in the error path —
+ * on the success path that marker is left for `persistOAuthIdentity`.
+ */
+export function consumeOAuthCallbackError(): OAuthCallbackError | null {
+  if (typeof window === "undefined") return null;
+  const hash = window.location.hash;
+  if (!hash || !hash.includes("error")) return null;
+
+  const params = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
+  const errorCode = params.get("error_code") ?? params.get("error") ?? "";
+  const errorDescription = (params.get("error_description") ?? "").replace(/\+/g, " ");
+  if (!errorCode && !errorDescription) return null;
+
+  let pendingProvider: string | null = null;
+  try {
+    pendingProvider = sessionStorage.getItem(PENDING_OAUTH_PROVIDER_KEY);
+    sessionStorage.removeItem(PENDING_OAUTH_PROVIDER_KEY);
+  } catch {
+    // ignore
+  }
+
+  try {
+    window.history.replaceState(
+      null,
+      "",
+      window.location.pathname + window.location.search,
+    );
+  } catch {
+    // ignore
+  }
+
+  authLog("oauth:callback-error", { errorCode, errorDescription, pendingProvider });
+  return { errorCode, errorDescription, pendingProvider };
+}
+
 export async function signInWithOAuthStrategy(strategy: AuthProviderStrategy) {
   if (!isSupabaseConfigured) throw new Error(NOT_CONFIGURED_MSG);
   authLog("oauth:start", { provider: strategy.supabaseProvider });

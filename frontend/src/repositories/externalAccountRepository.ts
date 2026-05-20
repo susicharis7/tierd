@@ -19,9 +19,14 @@ export type ExternalAccountRow = {
 export const externalAccountRepository = {
   async upsertFromOAuth(profileId: string, identity: OAuthIdentity): Promise<void> {
     // Manual upsert: the table's unique index on (profile_id, provider) is partial
-    // (WHERE provider IN ('github','linkedin',...)), which PostgREST can't infer for
-    // ON CONFLICT. Concurrent OAuth callbacks for the same user are vanishingly rare,
-    // so a select-then-update-or-insert is safe in practice.
+    // (WHERE provider IN ('github','linkedin',...)), which PostgREST can't infer
+    // for ON CONFLICT. We do SELECT-then-INSERT-or-UPDATE; if a concurrent caller
+    // wins the race between our SELECT and INSERT, the 23505 fallback below turns
+    // it into an UPDATE so the operation stays effectively idempotent.
+    //
+    // The race is real here because AuthProvider triggers this on SIGNED_IN,
+    // USER_UPDATED, and INITIAL_SESSION — all three commonly fire back-to-back
+    // right after an OAuth redirect.
     const payload = {
       profile_id: profileId,
       provider: identity.provider,
@@ -48,12 +53,24 @@ export const externalAccountRepository = {
         .update(payload)
         .eq("id", existing.id);
       if (error) throw error;
-    } else {
-      const { error } = await supabase
-        .from("profile_external_accounts")
-        .insert(payload);
-      if (error) throw error;
+      return;
     }
+
+    const { error: insertError } = await supabase
+      .from("profile_external_accounts")
+      .insert(payload);
+    if (!insertError) return;
+
+    // 23505 = unique_violation. A concurrent call inserted the row between our
+    // SELECT and INSERT — retry as UPDATE so the second caller still writes
+    // whatever fresh metadata it had.
+    if (insertError.code !== "23505") throw insertError;
+    const { error: updateError } = await supabase
+      .from("profile_external_accounts")
+      .update(payload)
+      .eq("profile_id", profileId)
+      .eq("provider", identity.provider);
+    if (updateError) throw updateError;
   },
 
   async listByProfile(profileId: string): Promise<ExternalAccountRow[]> {

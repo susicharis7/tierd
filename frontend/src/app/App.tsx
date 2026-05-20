@@ -36,7 +36,12 @@ export default function App() {
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
+          <BrowserRouter
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true,
+            }}
+          >
             <Routes>
               <Route path="/" element={<IndexPage />} />
               <Route path="/explore" element={<ExplorePage />} />

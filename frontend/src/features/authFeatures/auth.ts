@@ -3,7 +3,9 @@ import { isSupabaseConfigured, supabase } from "../../lib/supabase";
 import type { AuthProviderStrategy } from "../../strategies/auth";
 import type { LoginInput, ProfileRow, RegisterInput } from "./authTypes";
 
-const DEBUG_AUTH = true;
+// Gate the verbose auth tracing to dev. In prod we don't want every link /
+// sign-in event leaking into the user's console.
+const DEBUG_AUTH = import.meta.env.DEV;
 
 const NOT_CONFIGURED_MSG =
   "Supabase is not configured. Copy .env.example to .env and set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.";

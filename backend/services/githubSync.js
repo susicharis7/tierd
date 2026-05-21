@@ -1,6 +1,7 @@
 const { supabaseAdmin } = require("../lib/supabase");
 const {
   fetchViewerContributionDays,
+  fetchViewerTopLanguages,
   GitHubTokenInvalidError,
 } = require("../lib/github");
 
@@ -58,12 +59,27 @@ async function upsertContributionDays(profileId, days) {
   return rows.length;
 }
 
-async function markExternalAccountSynced(profileId) {
+async function markExternalAccountSynced(profileId, extraMetadata = null) {
   // Best-effort — failing this shouldn't fail the sync itself, but log it
   // so we notice if last_synced_at silently stops updating.
+  const patch = { last_synced_at: new Date().toISOString() };
+
+  // Merge any extra metadata we want to attach (e.g. top_languages). Read
+  // the current row first so we don't blow away keys we don't know about.
+  if (extraMetadata) {
+    const { data: existing } = await supabaseAdmin
+      .from("profile_external_accounts")
+      .select("metadata")
+      .eq("profile_id", profileId)
+      .eq("provider", "github")
+      .maybeSingle();
+    const merged = { ...(existing?.metadata ?? {}), ...extraMetadata };
+    patch.metadata = merged;
+  }
+
   const { error } = await supabaseAdmin
     .from("profile_external_accounts")
-    .update({ last_synced_at: new Date().toISOString() })
+    .update(patch)
     .eq("profile_id", profileId)
     .eq("provider", "github");
   if (error) {
@@ -83,9 +99,12 @@ async function markExternalAccountSynced(profileId) {
 async function syncGithubForProfile(profileId) {
   const accessToken = await readGithubAccessToken(profileId);
 
-  let result;
+  // Contributions are the headline data — if this fails, fail the whole
+  // sync. Languages are nice-to-have; tolerate their failure so a temporary
+  // rate-limit / 5xx on the languages query doesn't block the heatmap.
+  let contribResult;
   try {
-    result = await fetchViewerContributionDays(accessToken);
+    contribResult = await fetchViewerContributionDays(accessToken);
   } catch (err) {
     if (err instanceof GitHubTokenInvalidError) {
       await deleteGithubAccessToken(profileId);
@@ -93,13 +112,26 @@ async function syncGithubForProfile(profileId) {
     throw err;
   }
 
-  const rowsWritten = await upsertContributionDays(profileId, result.days);
-  await markExternalAccountSynced(profileId);
+  let topLanguages = [];
+  try {
+    topLanguages = await fetchViewerTopLanguages(accessToken, 5);
+  } catch (err) {
+    console.warn(
+      "[githubSync] languages fetch failed; continuing without them",
+      err?.message ?? err,
+    );
+  }
+
+  const rowsWritten = await upsertContributionDays(profileId, contribResult.days);
+  await markExternalAccountSynced(profileId, {
+    top_languages: topLanguages,
+  });
 
   return {
-    githubLogin: result.login,
-    totalContributions: result.totalContributions,
+    githubLogin: contribResult.login,
+    totalContributions: contribResult.totalContributions,
     daysSynced: rowsWritten,
+    topLanguages,
   };
 }
 

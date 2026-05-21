@@ -28,6 +28,7 @@ import {
 } from "../useProfileSocialData";
 import type { TechOption } from "../profileData";
 import { LinkedProvidersSection } from "./LinkedProvidersSection";
+import { useGithubLanguages } from "../useGithubLanguages";
 import ProfileBanner from "./ProfileBanner";
 import ProfileIdentityCard from "./ProfileIdentityCard";
 import ProfileSecondary from "./ProfileSecondary";
@@ -209,6 +210,12 @@ const ProfilePageContent = () => {
       session?.user?.identities?.some((i) => i.provider === "github"),
     );
 
+  // GitHub top languages for the viewed profile — populated by the backend
+  // sync (profile_external_accounts.metadata.top_languages). Drives the
+  // // stack card when present.
+  const githubLanguagesQuery = useGithubLanguages(resolvedUserId);
+  const githubLanguages = githubLanguagesQuery.data ?? [];
+
   const [topTech, setTopTech] = useState<string[]>([
     "React",
     "TypeScript",
@@ -346,6 +353,7 @@ const ProfilePageContent = () => {
                 isOwnProfile={isOwnProfile}
                 profileId={resolvedUserId}
                 isGithubLinked={isGithubLinked}
+                githubLanguages={githubLanguages}
               />
             </aside>
           </div>

@@ -1,5 +1,6 @@
 import { Doodle, MonoCaption, Tape, UserAvatar } from "../../../components/tierd";
 import { TECH_OPTIONS, type TechOption } from "../profileData";
+import type { GithubLanguage } from "../useGithubLanguages";
 import { GithubActivityPanel } from "./GithubActivityPanel";
 
 interface ProfileStickyRailProps {
@@ -19,6 +20,11 @@ interface ProfileStickyRailProps {
   profileId: string | null;
   /** True iff the viewer is the signed-in user AND their GitHub is linked. */
   isGithubLinked: boolean;
+  /**
+   * GitHub-derived top languages for the viewed profile. When non-empty,
+   * supersedes the manual `topTech` chips so the stack reflects real activity.
+   */
+  githubLanguages?: GithubLanguage[];
 }
 
 /**
@@ -39,6 +45,7 @@ const ProfileStickyRail = ({
   isOwnProfile,
   profileId,
   isGithubLinked,
+  githubLanguages,
 }: ProfileStickyRailProps) => {
   return (
     <div className="space-y-[18px]">
@@ -62,6 +69,7 @@ const ProfileStickyRail = ({
         topTech={topTech}
         onEditTech={onEditTech}
         isOwnProfile={isOwnProfile}
+        githubLanguages={githubLanguages}
       />
       <EndorsementCard />
     </div>
@@ -191,16 +199,21 @@ interface TechStackCardProps {
   topTech: string[];
   onEditTech?: () => void;
   isOwnProfile: boolean;
+  githubLanguages?: GithubLanguage[];
 }
 
 const TechStackCard = ({
   topTech,
   onEditTech,
   isOwnProfile,
+  githubLanguages,
 }: TechStackCardProps) => {
   const subTech = TECH_OPTIONS.filter(
     (t) => !topTech.includes(t),
   ) as readonly TechOption[];
+
+  const hasGithubLanguages =
+    Array.isArray(githubLanguages) && githubLanguages.length > 0;
 
   return (
     <div className="rounded-[18px] bg-cream/[0.04] border border-cream/[0.08] p-[22px]">
@@ -208,7 +221,10 @@ const TechStackCard = ({
         <Doodle.CodeBracket size={14} className="text-orange" />
         <MonoCaption tone="cream">// stack</MonoCaption>
         <div className="flex-1 h-px bg-cream/10" />
-        {isOwnProfile && onEditTech && (
+        {/* Edit only meaningful when we're falling back to manual chips —
+            hide it when GitHub data is driving the section so the user
+            doesn't get confused by edits that have no effect. */}
+        {isOwnProfile && onEditTech && !hasGithubLanguages && (
           <button
             type="button"
             onClick={onEditTech}
@@ -218,24 +234,55 @@ const TechStackCard = ({
           </button>
         )}
       </div>
-      <div className="flex flex-wrap gap-1.5">
-        {topTech.map((t) => (
-          <span
-            key={t}
-            className="inline-flex items-center rounded-full bg-orange text-cream font-mono-jb font-medium text-[11px] px-[11px] py-[5px]"
-          >
-            {t}
-          </span>
-        ))}
-        {subTech.map((t) => (
-          <span
-            key={t}
-            className="inline-flex items-center rounded-full bg-cream/[0.06] text-cream border border-dashed border-cream/20 font-mono-jb text-[11px] px-[11px] py-[5px]"
-          >
-            {t}
-          </span>
-        ))}
-      </div>
+
+      {hasGithubLanguages ? (
+        <>
+          <div className="flex flex-wrap gap-1.5 mb-2.5">
+            {githubLanguages!.map((l) => (
+              <span
+                key={l.name}
+                title={
+                  l.size > 0
+                    ? `${l.name} · ${(l.size / 1024).toFixed(1)} KB across your repos`
+                    : l.name
+                }
+                className="inline-flex items-center gap-1.5 rounded-full bg-orange text-cream font-mono-jb font-medium text-[11px] px-[11px] py-[5px]"
+              >
+                {l.color && (
+                  <span
+                    className="inline-block h-[8px] w-[8px] rounded-full border border-cream/40"
+                    style={{ backgroundColor: l.color }}
+                    aria-hidden
+                  />
+                )}
+                {l.name}
+              </span>
+            ))}
+          </div>
+          <p className="font-mono-jb text-[9px] uppercase tracking-[0.08em] text-muted-ink">
+            top languages · synced from github
+          </p>
+        </>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {topTech.map((t) => (
+            <span
+              key={t}
+              className="inline-flex items-center rounded-full bg-orange text-cream font-mono-jb font-medium text-[11px] px-[11px] py-[5px]"
+            >
+              {t}
+            </span>
+          ))}
+          {subTech.map((t) => (
+            <span
+              key={t}
+              className="inline-flex items-center rounded-full bg-cream/[0.06] text-cream border border-dashed border-cream/20 font-mono-jb text-[11px] px-[11px] py-[5px]"
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

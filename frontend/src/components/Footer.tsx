@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-import { MonoCaption } from "./tierd";
+import { MonoCaption, TierdLogo } from "./tierd";
 
 const Footer = () => {
   return (
@@ -9,9 +9,7 @@ const Footer = () => {
         <div className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
           {/* Brand */}
           <div className="space-y-3 max-w-[260px]">
-            <span className="font-boldonse text-[22px] text-cream leading-none">
-              Tierd<span className="text-orange">.</span>
-            </span>
+            <TierdLogo size="md" tone="cream" />
             <p className="font-mono-jb text-[12px] text-muted-ink leading-[1.6]">
               The developer ranking platform. Build in public, rank with proof.
             </p>

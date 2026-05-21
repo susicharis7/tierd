@@ -8,6 +8,7 @@ export { TierBadge, tierBadgeVariants, type Tier } from "./TierBadge";
 export { MonoCaption, monoCaptionVariants } from "./MonoCaption";
 export { ScribbleUnderline } from "./ScribbleUnderline";
 export { Tape, tapeVariants } from "./Tape";
+export { TierdLogo } from "./TierdLogo";
 export { DoodleAvatar } from "./DoodleAvatar";
 export { UserAvatar } from "./UserAvatar";
 export {

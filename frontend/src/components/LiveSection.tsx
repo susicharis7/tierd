@@ -16,13 +16,53 @@ import {
 
 const tilts = [-1, 0.5, -0.5, 1, -0.8, 0.3];
 
-const activityPlaceholders = [
-  { who: "Dino B.", tag: "shipped", what: "neuralquery v2 — semantic search in 200 lines.", pts: "+30", when: "2m" },
-  { who: "Mia V.", tag: "won", what: '"CLI Speedrun" challenge with tierd-cli.', pts: "+120", when: "12m" },
-  { who: "Amir H.", tag: "merged", what: "4 PRs to rust-lang/rust this week.", pts: "+80", when: "34m" },
-  { who: "Sara K.", tag: "tier up", what: "just hit T1 Shipper. earned in 11 weeks.", pts: "↑", when: "2h", big: true },
-  { who: "Haris S.", tag: "starred", what: "CRDTSync now at 342 ⭐ — top trending repo.", pts: "+15", when: "3h" },
-] as const;
+type ActivityPlaceholder = {
+  who: string;
+  tag: string;
+  what: string;
+  pts: string;
+  when: string;
+  big?: boolean;
+};
+
+const activityPlaceholders: readonly ActivityPlaceholder[] = [
+  {
+    who: "Dino B.",
+    tag: "shipped",
+    what: "neuralquery v2 — semantic search in 200 lines.",
+    pts: "+30",
+    when: "2m",
+  },
+  {
+    who: "Mia V.",
+    tag: "won",
+    what: '"CLI Speedrun" challenge with tierd-cli.',
+    pts: "+120",
+    when: "12m",
+  },
+  {
+    who: "Amir H.",
+    tag: "merged",
+    what: "4 PRs to rust-lang/rust this week.",
+    pts: "+80",
+    when: "34m",
+  },
+  {
+    who: "Sara K.",
+    tag: "tier up",
+    what: "just hit T1 Shipper. earned in 11 weeks.",
+    pts: "↑",
+    when: "2h",
+    big: true,
+  },
+  {
+    who: "Haris S.",
+    tag: "starred",
+    what: "CRDTSync now at 342 ⭐ — top trending repo.",
+    pts: "+15",
+    when: "3h",
+  },
+];
 
 function formatTimeLeft(endsAtIso: string): string {
   const now = Date.now();
@@ -90,7 +130,9 @@ const LiveSection = () => {
                       >
                         {a.tag}
                       </span>
-                      <span className={a.big ? "text-cream/70" : "text-muted-ink"}>
+                      <span
+                        className={a.big ? "text-cream/70" : "text-muted-ink"}
+                      >
                         {" "}
                         · {a.when} ago
                       </span>
@@ -116,8 +158,19 @@ const LiveSection = () => {
 
           {/* Right column — rising + active challenge */}
           <div className="space-y-5">
-            <Sticker color="cream" tilt={-1} padding="lg" radius="lg" className="relative">
-              <Tape color="tape" size="sm" tilt={-4} className="-top-[10px] left-8" />
+            <Sticker
+              color="cream"
+              tilt={-1}
+              padding="lg"
+              radius="lg"
+              className="relative"
+            >
+              <Tape
+                color="tape"
+                size="sm"
+                tilt={-4}
+                className="-top-[10px] left-8"
+              />
               <MonoCaption tone="muted" className="mb-3.5">
                 // rising builders
               </MonoCaption>

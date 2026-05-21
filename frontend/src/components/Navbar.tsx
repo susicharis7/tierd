@@ -5,7 +5,7 @@ import { Menu, X, LogOut, UserCog } from "lucide-react";
 
 import AuthDialog from "./AuthDialog";
 import { useAuth } from "../features/authFeatures/AuthProvider";
-import { Doodle, UserAvatar } from "./tierd";
+import { Doodle, TierdLogo, UserAvatar } from "./tierd";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,15 +60,15 @@ const Navbar = () => {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-ink/85 backdrop-blur-xl border-b border-dashed border-cream/[0.12]">
       <div className="section-container flex items-center justify-between gap-4 py-4 sm:py-[18px]">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2.5 shrink-0">
-          <span className="font-boldonse text-[22px] sm:text-[26px] text-cream tracking-[-0.02em] leading-none">
-            Tierd<span className="text-orange">.</span>
-          </span>
-          <span className="hidden sm:inline-flex items-center rounded-full bg-orange-soft text-ink font-mono-jb font-bold text-[9px] uppercase tracking-[0.12em] px-2 py-[3px]">
-            BETA
-          </span>
-        </Link>
+        {/* Logo — wordmark on >=sm, compact "t." mark on phones */}
+        <div className="shrink-0 flex items-center">
+          <div className="hidden sm:flex">
+            <TierdLogo size="md" tone="cream" beta />
+          </div>
+          <div className="flex sm:hidden">
+            <TierdLogo variant="mark" size="md" bg="ink-2" />
+          </div>
+        </div>
 
         {/* Centered pill nav (desktop) */}
         <div className="hidden md:flex items-center gap-1 rounded-full bg-cream/[0.04] border border-cream/[0.08] p-[5px]">

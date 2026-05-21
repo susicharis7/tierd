@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-import { Doodle, MonoCaption, StickerBadge } from "./tierd";
+import { Doodle, MonoCaption, StickerBadge, TierdLogo } from "./tierd";
 
 const footerCols = [
   { title: "Product", links: ["Explore", "Leaderboard", "Challenges", "Get Verified"] },
@@ -82,9 +82,7 @@ const FooterCTA = () => {
         <div className="section-container">
           <div className="flex flex-wrap justify-between items-start gap-10">
             <div className="max-w-[320px]">
-              <div className="font-boldonse text-[36px] text-cream leading-none">
-                Tierd<span className="text-orange">.</span>
-              </div>
+              <TierdLogo size="lg" tone="cream" />
               <p className="font-mono-jb text-[12px] text-muted-ink mt-3 leading-[1.6]">
                 The ranked dev platform. Built by builders, for builders. Made with
                 care in Sarajevo 🇧🇦.

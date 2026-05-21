@@ -28,6 +28,8 @@ import {
 } from "../useProfileSocialData";
 import type { TechOption } from "../profileData";
 import { LinkedProvidersSection } from "./LinkedProvidersSection";
+import { GithubActivityPanel } from "./GithubActivityPanel";
+import { useGithubActivity } from "../useGithubActivity";
 import ProfileBanner from "./ProfileBanner";
 import ProfileIdentityCard from "./ProfileIdentityCard";
 import ProfileSecondary from "./ProfileSecondary";
@@ -41,27 +43,8 @@ import {
 
 type ProfileAuthMode = "login" | "signup";
 
-/** Pull the last 7-day slice out of the rolling heatmap for the right-rail bars. */
-const lastWeekActivity = (data: number[][]): number[] =>
-  data[data.length - 1] ?? Array(7).fill(0);
-
-/* Stable mock heatmap data, generated once per module load. */
-const heatmapData = generateHeatmapData();
-
-function generateHeatmapData(): number[][] {
-  const out: number[][] = [];
-  for (let w = 0; w < 52; w++) {
-    const week: number[] = [];
-    for (let d = 0; d < 7; d++) {
-      const base = Math.random();
-      if (w > 40) week.push(base > 0.3 ? Math.ceil(Math.random() * 4) : 0);
-      else if (w > 30) week.push(base > 0.5 ? Math.ceil(Math.random() * 3) : 0);
-      else week.push(base > 0.6 ? Math.ceil(Math.random() * 2) : 0);
-    }
-    out.push(week);
-  }
-  return out;
-}
+/** Shown in the right-rail "// this week" bars before real data resolves. */
+const EMPTY_WEEK: number[] = [0, 0, 0, 0, 0, 0, 0];
 
 const ProfilePageContent = () => {
   const navigate = useNavigate();
@@ -220,7 +203,21 @@ const ProfilePageContent = () => {
   const followingCount = profileProgress?.followingCount ?? 0;
   const weeklyScore = profileProgress?.weeklyScore ?? 0;
   const globalPercentile = profileProgress?.globalPercentile ?? 100;
-  const weekActivity = useMemo(() => lastWeekActivity(heatmapData), []);
+
+  // Pull the real "this week" slice from the same data that feeds the
+  // year heatmap, so the right-rail bars match the panel below.
+  const githubActivity = useGithubActivity(resolvedUserId);
+  const weekActivity = githubActivity.data?.lastWeek ?? EMPTY_WEEK;
+
+  // Read directly from the Supabase session instead of a second
+  // useLinkedProviders fetch — LinkedProvidersSection already owns that
+  // call. session.user.identities is the source of truth for which
+  // providers the signed-in user has connected.
+  const isGithubLinked =
+    isOwnProfile &&
+    Boolean(
+      session?.user?.identities?.some((i) => i.provider === "github"),
+    );
 
   const [topTech, setTopTech] = useState<string[]>([
     "React",
@@ -304,6 +301,12 @@ const ProfilePageContent = () => {
                   <LinkedProvidersSection />
                 </div>
               )}
+
+              <GithubActivityPanel
+                profileId={resolvedUserId}
+                isOwnProfile={isOwnProfile}
+                isLinked={isGithubLinked}
+              />
 
               <section>
                 <div className="mb-4 flex items-end justify-between gap-4 border-b border-dashed border-cream/10 pb-3">

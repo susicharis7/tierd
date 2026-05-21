@@ -12,6 +12,8 @@ interface GithubActivityPanelProps {
   isLinked: boolean;
   /** Optional callback so the "Connect GitHub" CTA can scroll/focus the link section. */
   onPromptLink?: () => void;
+  /** Tighter cells + smaller padding so the panel fits in the sidebar rail. */
+  compact?: boolean;
 }
 
 const MONTH_LABELS = [
@@ -19,6 +21,14 @@ const MONTH_LABELS = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 const DAY_ROW_LABELS = ["Mon", "", "Wed", "", "Fri", "", ""];
+
+type GridSize = {
+  cell: number; // px
+  gap: number; // px
+  dayCol: number; // width of the leftmost weekday-label column, px
+};
+const SIZE_DEFAULT: GridSize = { cell: 12, gap: 3, dayCol: 20 };
+const SIZE_COMPACT: GridSize = { cell: 10, gap: 2, dayCol: 18 };
 
 /**
  * Maps a single day's contribution count to one of 5 intensity tiers. The
@@ -38,7 +48,13 @@ function pluralize(n: number, singular: string, plural = `${singular}s`) {
   return `${n} ${n === 1 ? singular : plural}`;
 }
 
-function HeatmapGrid({ weeks }: { weeks: GithubActivityCell[][] }) {
+function HeatmapGrid({
+  weeks,
+  size,
+}: {
+  weeks: GithubActivityCell[][];
+  size: GridSize;
+}) {
   /**
    * Month label headers — one label per week column when the first non-future
    * day in that week falls in a new month. This mirrors GitHub's behavior
@@ -57,15 +73,23 @@ function HeatmapGrid({ weeks }: { weeks: GithubActivityCell[][] }) {
     });
   }, [weeks]);
 
+  const cellStyle = { height: size.cell, width: size.cell };
+  const colStyle = { width: size.cell };
+  const dayLabelStyle = { height: size.cell, lineHeight: `${size.cell}px` };
+
   return (
     <div className="overflow-x-auto -mx-1 px-1 pb-1">
       <div className="inline-block min-w-full">
         {/* Month labels row */}
-        <div className="flex gap-[3px] pl-[26px] mb-1.5">
+        <div
+          className="flex mb-1.5"
+          style={{ gap: size.gap, paddingLeft: size.dayCol + 6 }}
+        >
           {monthHeaders.map((label, idx) => (
             <div
               key={idx}
-              className="w-[12px] font-mono-jb text-[9px] uppercase tracking-[0.08em] text-muted-ink"
+              style={colStyle}
+              className="font-mono-jb text-[9px] uppercase tracking-[0.08em] text-muted-ink"
             >
               {label}
             </div>
@@ -74,20 +98,24 @@ function HeatmapGrid({ weeks }: { weeks: GithubActivityCell[][] }) {
 
         {/* Day-of-week labels + grid */}
         <div className="flex gap-[6px]">
-          <div className="flex flex-col gap-[3px] w-[20px] pt-[1px]">
+          <div
+            className="flex flex-col pt-[1px]"
+            style={{ gap: size.gap, width: size.dayCol }}
+          >
             {DAY_ROW_LABELS.map((label, idx) => (
               <div
                 key={idx}
-                className="h-[12px] font-mono-jb text-[9px] uppercase tracking-[0.08em] text-muted-ink leading-[12px]"
+                style={dayLabelStyle}
+                className="font-mono-jb text-[9px] uppercase tracking-[0.08em] text-muted-ink"
               >
                 {label}
               </div>
             ))}
           </div>
 
-          <div className="flex gap-[3px]">
+          <div className="flex" style={{ gap: size.gap }}>
             {weeks.map((week, w) => (
-              <div key={w} className="flex flex-col gap-[3px]">
+              <div key={w} className="flex flex-col" style={{ gap: size.gap }}>
                 {week.map((cell, d) => (
                   <div
                     key={d}
@@ -96,8 +124,9 @@ function HeatmapGrid({ weeks }: { weeks: GithubActivityCell[][] }) {
                         ? cell.date
                         : `${pluralize(cell.contributions, "contribution")} on ${cell.date}`
                     }
+                    style={cellStyle}
                     className={cn(
-                      "h-[12px] w-[12px] rounded-[3px] border transition-colors",
+                      "rounded-[3px] border transition-colors",
                       intensityClass(cell.contributions, cell.inFuture),
                     )}
                   />
@@ -111,15 +140,16 @@ function HeatmapGrid({ weeks }: { weeks: GithubActivityCell[][] }) {
   );
 }
 
-function Legend() {
+function Legend({ size }: { size: GridSize }) {
   return (
     <div className="flex items-center gap-2 text-muted-ink">
       <span className="font-mono-jb text-[9px] uppercase tracking-[0.08em]">less</span>
       {[0, 2, 5, 8, 12].map((sample, idx) => (
         <span
           key={idx}
+          style={{ height: size.cell, width: size.cell }}
           className={cn(
-            "h-[12px] w-[12px] rounded-[3px] border",
+            "rounded-[3px] border",
             intensityClass(sample, false),
           )}
         />
@@ -196,6 +226,7 @@ export function GithubActivityPanel({
   isOwnProfile,
   isLinked,
   onPromptLink,
+  compact = false,
 }: GithubActivityPanelProps) {
   const { data, loading } = useGithubActivity(profileId);
 
@@ -206,9 +237,18 @@ export function GithubActivityPanel({
   }
 
   const hasData = data && !data.isEmpty;
+  const size = compact ? SIZE_COMPACT : SIZE_DEFAULT;
+  const outerPadding = compact ? "p-[18px]" : "p-[22px]";
+  const innerSpacing = compact ? "space-y-3" : "space-y-4";
 
   return (
-    <div className="rounded-[18px] bg-cream/[0.04] border border-cream/[0.08] p-[22px] space-y-4">
+    <div
+      className={cn(
+        "rounded-[18px] bg-cream/[0.04] border border-cream/[0.08]",
+        outerPadding,
+        innerSpacing,
+      )}
+    >
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2.5">
           <Doodle.Pulse size={14} className="text-orange" />
@@ -244,12 +284,12 @@ export function GithubActivityPanel({
 
       {hasData && (
         <>
-          <HeatmapGrid weeks={data.weeks} />
+          <HeatmapGrid weeks={data.weeks} size={size} />
           <div className="flex items-center justify-between gap-3 flex-wrap pt-1">
             <p className="font-mono-jb text-[9px] uppercase tracking-[0.08em] text-muted-ink">
               last 52 weeks · synced from github
             </p>
-            <Legend />
+            <Legend size={size} />
           </div>
         </>
       )}

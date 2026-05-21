@@ -1,6 +1,6 @@
 import { Doodle, MonoCaption, Tape, UserAvatar } from "../../../components/tierd";
-import { cn } from "../../../lib/utils";
 import { TECH_OPTIONS, type TechOption } from "../profileData";
+import { GithubActivityPanel } from "./GithubActivityPanel";
 
 interface ProfileStickyRailProps {
   tierCode: string | null;
@@ -15,12 +15,14 @@ interface ProfileStickyRailProps {
   topTech: string[];
   onEditTech?: () => void;
   isOwnProfile: boolean;
-  /** Last 7 day-bucket activity counts (Mon → Sun). */
-  weekActivity: number[];
+  /** Profile being viewed — used by the GitHub activity heatmap. */
+  profileId: string | null;
+  /** True iff the viewer is the signed-in user AND their GitHub is linked. */
+  isGithubLinked: boolean;
 }
 
 /**
- * Right-side sticky rail: Tier card → Activity bars → Tech stack → Endorsement.
+ * Right-side sticky rail: Tier card → GitHub activity → Tech stack → Endorsement.
  * Sits inside a sticky `aside` in the page grid; only renders content.
  */
 const ProfileStickyRail = ({
@@ -35,7 +37,8 @@ const ProfileStickyRail = ({
   topTech,
   onEditTech,
   isOwnProfile,
-  weekActivity,
+  profileId,
+  isGithubLinked,
 }: ProfileStickyRailProps) => {
   return (
     <div className="space-y-[18px]">
@@ -49,7 +52,12 @@ const ProfileStickyRail = ({
         weeklyScore={weeklyScore}
         globalPercentile={globalPercentile}
       />
-      <ActivityCard data={weekActivity} />
+      <GithubActivityPanel
+        profileId={profileId}
+        isOwnProfile={isOwnProfile}
+        isLinked={isGithubLinked}
+        compact
+      />
       <TechStackCard
         topTech={topTech}
         onEditTech={onEditTech}
@@ -174,53 +182,10 @@ const TierCard = ({
   );
 };
 
-interface ActivityCardProps {
-  data: number[];
-}
-
-const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
-
-const ActivityCard = ({ data }: ActivityCardProps) => {
-  const max = Math.max(1, ...data);
-  const total = data.reduce((a, b) => a + b, 0);
-  const streak = data.filter((v) => v > 0).length;
-
-  return (
-    <div className="rounded-[18px] bg-cream/[0.04] border border-cream/[0.08] p-[22px]">
-      <div className="flex items-center justify-between mb-3.5">
-        <div className="flex items-center gap-2.5">
-          <Doodle.Pulse size={14} className="text-orange" />
-          <MonoCaption tone="cream">// this week</MonoCaption>
-        </div>
-        <MonoCaption tone="cream" className="text-[9px]">
-          {total} contribs · 🔥 {streak}d
-        </MonoCaption>
-      </div>
-      <div className="flex items-end gap-2 h-[100px]">
-        {data.map((v, i) => {
-          const pct = (v / max) * 100;
-          return (
-            <div
-              key={i}
-              className="flex-1 flex flex-col items-center gap-1.5"
-            >
-              <div
-                className={cn(
-                  "w-full rounded transition-[height]",
-                  v === 0 ? "bg-cream/[0.08]" : "bg-orange",
-                )}
-                style={{ height: `${Math.max(pct, 4)}%` }}
-              />
-              <span className="font-mono-jb text-[9px] uppercase tracking-[0.06em] text-muted-ink">
-                {DAY_LABELS[i]}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
+// The old "// this week" ActivityCard lived here but was always fed mock
+// data. It's been replaced by <GithubActivityPanel /> wired to the synced
+// github_daily_contributions rows. Search this file's history if you need
+// the original bar-chart implementation.
 
 interface TechStackCardProps {
   topTech: string[];

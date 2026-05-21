@@ -28,8 +28,6 @@ import {
 } from "../useProfileSocialData";
 import type { TechOption } from "../profileData";
 import { LinkedProvidersSection } from "./LinkedProvidersSection";
-import { GithubActivityPanel } from "./GithubActivityPanel";
-import { useGithubActivity } from "../useGithubActivity";
 import ProfileBanner from "./ProfileBanner";
 import ProfileIdentityCard from "./ProfileIdentityCard";
 import ProfileSecondary from "./ProfileSecondary";
@@ -42,9 +40,6 @@ import {
 } from "./ProfileDialogs";
 
 type ProfileAuthMode = "login" | "signup";
-
-/** Shown in the right-rail "// this week" bars before real data resolves. */
-const EMPTY_WEEK: number[] = [0, 0, 0, 0, 0, 0, 0];
 
 const ProfilePageContent = () => {
   const navigate = useNavigate();
@@ -204,11 +199,6 @@ const ProfilePageContent = () => {
   const weeklyScore = profileProgress?.weeklyScore ?? 0;
   const globalPercentile = profileProgress?.globalPercentile ?? 100;
 
-  // Pull the real "this week" slice from the same data that feeds the
-  // year heatmap, so the right-rail bars match the panel below.
-  const githubActivity = useGithubActivity(resolvedUserId);
-  const weekActivity = githubActivity.data?.lastWeek ?? EMPTY_WEEK;
-
   // Read directly from the Supabase session instead of a second
   // useLinkedProviders fetch — LinkedProvidersSection already owns that
   // call. session.user.identities is the source of truth for which
@@ -302,12 +292,6 @@ const ProfilePageContent = () => {
                 </div>
               )}
 
-              <GithubActivityPanel
-                profileId={resolvedUserId}
-                isOwnProfile={isOwnProfile}
-                isLinked={isGithubLinked}
-              />
-
               <section>
                 <div className="mb-4 flex items-end justify-between gap-4 border-b border-dashed border-cream/10 pb-3">
                   <div className="flex items-center gap-2.5">
@@ -360,7 +344,8 @@ const ProfilePageContent = () => {
                 topTech={topTech}
                 onEditTech={() => setTechOpen(true)}
                 isOwnProfile={isOwnProfile}
-                weekActivity={weekActivity}
+                profileId={resolvedUserId}
+                isGithubLinked={isGithubLinked}
               />
             </aside>
           </div>

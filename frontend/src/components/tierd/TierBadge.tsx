@@ -1,9 +1,9 @@
-import * as React from "react";
+﻿import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "../../lib/utils";
 
-export type Tier = "T0" | "T1" | "T2" | "T3" | "—";
+export type Tier = "T0" | "T1" | "T2" | "T3" | "UNRANKED";
 
 const tierBadgeVariants = cva(
   "inline-flex items-center gap-1.5 rounded-full font-mono-jb font-bold uppercase tracking-[0.08em]",
@@ -14,7 +14,7 @@ const tierBadgeVariants = cva(
         T1: "bg-orange text-cream",
         T2: "bg-transparent text-orange border-[1.5px] border-orange",
         T3: "bg-transparent text-orange border-[1.5px] border-orange/60",
-        "—": "bg-transparent text-muted-ink border border-muted-ink/40",
+        UNRANKED: "bg-transparent text-muted-ink border border-muted-ink/40",
       },
       size: {
         sm: "text-[9px] px-[6px] py-[2px]",
@@ -32,25 +32,19 @@ const tierBadgeVariants = cva(
 interface TierBadgeProps
   extends React.HTMLAttributes<HTMLSpanElement>,
     VariantProps<typeof tierBadgeVariants> {
-  /** Force a custom label (e.g. "T1 SHIPPER"). Defaults to the tier code. */
   label?: string;
 }
 
-/**
- * Pill rendering of a developer's tier. T0 is invite-only (dashed-orange),
- * T1 is the orange-filled hero state, T2/T3 are orange-outlined, and "—"
- * renders an "UNRANKED" muted pill.
- */
 const TierBadge = React.forwardRef<HTMLSpanElement, TierBadgeProps>(
   ({ className, tier = "T1", size, label, children, ...props }, ref) => {
-    const display = label ?? (tier === "—" ? "UNRANKED" : tier);
+    const display = label ?? (tier === "UNRANKED" ? "UNRANKED" : tier);
     return (
       <span
         ref={ref}
         className={cn(tierBadgeVariants({ tier, size }), className)}
         {...props}
       >
-        {tier === "T0" && <span aria-hidden>🔒</span>}
+        {tier === "T0" && <span aria-hidden>LOCK</span>}
         {display}
         {children}
       </span>

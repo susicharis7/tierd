@@ -1,4 +1,5 @@
-import { Doodle, MonoCaption, Tape, UserAvatar } from "../../../components/tierd";
+﻿import { Doodle, MonoCaption, Tape, UserAvatar } from "../../../components/tierd";
+import { mapTierToBadge } from "../../rankingFeatures/tierMapping";
 import { TECH_OPTIONS, type TechOption } from "../profileData";
 import type { GithubLanguage } from "../useGithubLanguages";
 import { GithubActivityPanel } from "./GithubActivityPanel";
@@ -12,25 +13,14 @@ interface ProfileStickyRailProps {
   progressPct: number;
   weeklyScore: number;
   globalPercentile: number;
-  /** Tech chips — items in `topTech` are highlighted (primary). */
   topTech: string[];
   onEditTech?: () => void;
   isOwnProfile: boolean;
-  /** Profile being viewed — used by the GitHub activity heatmap. */
   profileId: string | null;
-  /** True iff the viewer is the signed-in user AND their GitHub is linked. */
   isGithubLinked: boolean;
-  /**
-   * GitHub-derived top languages for the viewed profile. When non-empty,
-   * supersedes the manual `topTech` chips so the stack reflects real activity.
-   */
   githubLanguages?: GithubLanguage[];
 }
 
-/**
- * Right-side sticky rail: Tier card → GitHub activity → Tech stack → Endorsement.
- * Sits inside a sticky `aside` in the page grid; only renders content.
- */
 const ProfileStickyRail = ({
   tierCode,
   tierName,
@@ -59,18 +49,8 @@ const ProfileStickyRail = ({
         weeklyScore={weeklyScore}
         globalPercentile={globalPercentile}
       />
-      <GithubActivityPanel
-        profileId={profileId}
-        isOwnProfile={isOwnProfile}
-        isLinked={isGithubLinked}
-        compact
-      />
-      <TechStackCard
-        topTech={topTech}
-        onEditTech={onEditTech}
-        isOwnProfile={isOwnProfile}
-        githubLanguages={githubLanguages}
-      />
+      <GithubActivityPanel profileId={profileId} isOwnProfile={isOwnProfile} isLinked={isGithubLinked} compact />
+      <TechStackCard topTech={topTech} onEditTech={onEditTech} isOwnProfile={isOwnProfile} githubLanguages={githubLanguages} />
       <EndorsementCard />
     </div>
   );
@@ -97,48 +77,23 @@ const TierCard = ({
   weeklyScore,
   globalPercentile,
 }: TierCardProps) => {
-  const code = tierCode ?? "—";
+  const code = mapTierToBadge(tierCode);
   const nextTotal = currentScore + pointsToNextTier;
   const percentileLabel = `TOP ${Math.max(1, Math.round(globalPercentile))}%`;
-  const weeklyLabel =
-    weeklyScore === 0
-      ? "0"
-      : `${weeklyScore > 0 ? "+" : ""}${weeklyScore}`;
+  const weeklyLabel = weeklyScore === 0 ? "0" : `${weeklyScore > 0 ? "+" : ""}${weeklyScore}`;
 
   return (
-    <div
-      className="relative overflow-hidden rounded-[22px] bg-orange text-cream p-6 shadow-glow-orange"
-      style={{ transform: "rotate(-0.8deg)" }}
-    >
+    <div className="relative overflow-hidden rounded-[22px] bg-orange text-cream p-6 shadow-glow-orange" style={{ transform: "rotate(-0.8deg)" }}>
       <Tape color="cream" size="md" tilt={5} className="top-[-10px] right-8" />
-      <Doodle.Sparkle
-        size={28}
-        className="absolute top-7 right-6 text-cream pointer-events-none"
-        aria-hidden
-      />
-      <Doodle.Sparkle
-        size={16}
-        className="absolute top-5 right-16 text-cream/70 pointer-events-none"
-        aria-hidden
-      />
 
-      <MonoCaption
-        tone="cream"
-        className="!text-cream/70 !tracking-[0.15em]"
-      >
+      <MonoCaption tone="cream" className="!text-cream/70 !tracking-[0.15em]">
         // CURRENT TIER
       </MonoCaption>
       <div className="flex items-baseline gap-4 mt-3">
-        <div className="font-boldonse text-[80px] sm:text-[96px] leading-[0.9] text-cream">
-          {code}
-        </div>
+        <div className="font-boldonse text-[80px] sm:text-[96px] leading-[0.9] text-cream">{code}</div>
         <div className="pb-3.5">
-          <div className="font-grot font-extrabold text-[22px] text-cream">
-            {tierName}
-          </div>
-          <p className="font-mono-jb text-[11px] uppercase tracking-[0.12em] text-cream/70">
-            {percentileLabel} · GLOBAL
-          </p>
+          <div className="font-grot font-extrabold text-[22px] text-cream">{tierName}</div>
+          <p className="font-mono-jb text-[11px] uppercase tracking-[0.12em] text-cream/70">{percentileLabel}. GLOBAL</p>
         </div>
       </div>
 
@@ -150,50 +105,33 @@ const TierCard = ({
                 {pointsToNextTier} pts to <b>{nextTierName}</b>
               </span>
               <span>
-                {currentScore.toLocaleString()} /{" "}
-                {nextTotal.toLocaleString()}
+                {currentScore.toLocaleString()} / {nextTotal.toLocaleString()}
               </span>
             </div>
             <div className="h-2.5 bg-black/20 rounded-full overflow-hidden">
-              <div
-                className="relative h-full bg-cream rounded-full"
-                style={{ width: `${Math.max(3, Math.min(100, progressPct))}%` }}
-              >
+              <div className="relative h-full bg-cream rounded-full" style={{ width: `${Math.max(3, Math.min(100, progressPct))}%` }}>
                 <div className="absolute right-0 -top-[3px] w-4 h-4 rounded-full bg-cream border-[3px] border-orange" />
               </div>
             </div>
           </>
         ) : (
-          <p className="font-mono-jb text-[11px] uppercase tracking-[0.12em] text-cream text-center">
-            top tier reached · stay shipping
-          </p>
+          <p className="font-mono-jb text-[11px] uppercase tracking-[0.12em] text-cream text-center">top tier reached. stay shipping</p>
         )}
       </div>
 
       <div className="grid grid-cols-2 gap-3 mt-5">
         <div>
           <div className="font-boldonse text-[20px] text-cream">{weeklyLabel}</div>
-          <MonoCaption tone="cream" className="!text-cream/70">
-            THIS WEEK
-          </MonoCaption>
+          <MonoCaption tone="cream" className="!text-cream/70">THIS WEEK</MonoCaption>
         </div>
         <div>
-          <div className="font-boldonse text-[20px] text-cream">
-            {percentileLabel}
-          </div>
-          <MonoCaption tone="cream" className="!text-cream/70">
-            PERCENTILE
-          </MonoCaption>
+          <div className="font-boldonse text-[20px] text-cream">{percentileLabel}</div>
+          <MonoCaption tone="cream" className="!text-cream/70">PERCENTILE</MonoCaption>
         </div>
       </div>
     </div>
   );
 };
-
-// The old "// this week" ActivityCard lived here but was always fed mock
-// data. It's been replaced by <GithubActivityPanel /> wired to the synced
-// github_daily_contributions rows. Search this file's history if you need
-// the original bar-chart implementation.
 
 interface TechStackCardProps {
   topTech: string[];
@@ -202,18 +140,9 @@ interface TechStackCardProps {
   githubLanguages?: GithubLanguage[];
 }
 
-const TechStackCard = ({
-  topTech,
-  onEditTech,
-  isOwnProfile,
-  githubLanguages,
-}: TechStackCardProps) => {
-  const subTech = TECH_OPTIONS.filter(
-    (t) => !topTech.includes(t),
-  ) as readonly TechOption[];
-
-  const hasGithubLanguages =
-    Array.isArray(githubLanguages) && githubLanguages.length > 0;
+const TechStackCard = ({ topTech, onEditTech, isOwnProfile, githubLanguages }: TechStackCardProps) => {
+  const subTech = TECH_OPTIONS.filter((t) => !topTech.includes(t)) as readonly TechOption[];
+  const hasGithubLanguages = Array.isArray(githubLanguages) && githubLanguages.length > 0;
 
   return (
     <div className="rounded-[18px] bg-cream/[0.04] border border-cream/[0.08] p-[22px]">
@@ -221,9 +150,6 @@ const TechStackCard = ({
         <Doodle.CodeBracket size={14} className="text-orange" />
         <MonoCaption tone="cream">// stack</MonoCaption>
         <div className="flex-1 h-px bg-cream/10" />
-        {/* Edit only meaningful when we're falling back to manual chips —
-            hide it when GitHub data is driving the section so the user
-            doesn't get confused by edits that have no effect. */}
         {isOwnProfile && onEditTech && !hasGithubLanguages && (
           <button
             type="button"
@@ -241,11 +167,7 @@ const TechStackCard = ({
             {githubLanguages!.map((l) => (
               <span
                 key={l.name}
-                title={
-                  l.size > 0
-                    ? `${l.name} · ${(l.size / 1024).toFixed(1)} KB across your repos`
-                    : l.name
-                }
+                title={l.size > 0 ? `${l.name} . ${(l.size / 1024).toFixed(1)} KB across your repos` : l.name}
                 className="inline-flex items-center gap-1.5 rounded-full bg-orange text-cream font-mono-jb font-medium text-[11px] px-[11px] py-[5px]"
               >
                 {l.color && (
@@ -259,17 +181,12 @@ const TechStackCard = ({
               </span>
             ))}
           </div>
-          <p className="font-mono-jb text-[9px] uppercase tracking-[0.08em] text-muted-ink">
-            top languages · synced from github
-          </p>
+          <p className="font-mono-jb text-[9px] uppercase tracking-[0.08em] text-muted-ink">top languages . synced from github</p>
         </>
       ) : (
         <div className="flex flex-wrap gap-1.5">
           {topTech.map((t) => (
-            <span
-              key={t}
-              className="inline-flex items-center rounded-full bg-orange text-cream font-mono-jb font-medium text-[11px] px-[11px] py-[5px]"
-            >
+            <span key={t} className="inline-flex items-center rounded-full bg-orange text-cream font-mono-jb font-medium text-[11px] px-[11px] py-[5px]">
               {t}
             </span>
           ))}
@@ -288,27 +205,17 @@ const TechStackCard = ({
 };
 
 const EndorsementCard = () => (
-  <div
-    className="relative rounded-[16px] bg-cream text-ink p-5 shadow-[0_8px_24px_rgba(0,0,0,0.25)]"
-    style={{ transform: "rotate(1.2deg)" }}
-  >
+  <div className="relative rounded-[16px] bg-cream text-ink p-5 shadow-[0_8px_24px_rgba(0,0,0,0.25)]" style={{ transform: "rotate(1.2deg)" }}>
     <Tape color="tape" size="md" tilt={-4} className="top-[-10px] left-8" />
-    <div className="font-boldonse text-[30px] text-orange leading-none">
-      &ldquo;
-    </div>
+    <div className="font-boldonse text-[30px] text-orange leading-none">&ldquo;</div>
     <p className="font-grot font-medium text-[14px] mt-1.5 leading-[1.5]">
-      Tarik builds tools I actually use. ships fast, reviews patiently, and
-      cares about DX more than anyone i know.
+      Tarik builds tools I actually use, ships fast, reviews patiently, and cares about DX.
     </p>
     <div className="flex items-center gap-2.5 mt-3.5">
       <UserAvatar name="L" size={28} />
       <div>
-        <div className="font-mono-jb text-[11px] font-bold text-ink">
-          @lenam · T1
-        </div>
-        <div className="font-mono-jb text-[8px] uppercase tracking-[0.1em] text-muted-cream">
-          endorsed · 3d ago
-        </div>
+        <div className="font-mono-jb text-[11px] font-bold text-ink">@lenam . T1</div>
+        <div className="font-mono-jb text-[8px] uppercase tracking-[0.1em] text-muted-cream">endorsed . 3d ago</div>
       </div>
     </div>
   </div>

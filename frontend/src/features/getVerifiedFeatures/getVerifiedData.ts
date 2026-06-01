@@ -1,11 +1,4 @@
-/**
- * Static content for the Get Verified marketing page. Most of this is
- * intentionally mock — the page is a "here's how it works" pitch, not a live
- * evaluation dashboard. Real tier/score data is pulled per-user from
- * `useProfileProgressQuery` when available.
- */
-
-export type StepAccent =
+﻿export type StepAccent =
   | "orange"
   | "plum"
   | "forest"
@@ -25,43 +18,43 @@ export const evaluationSteps: EvaluationStep[] = [
   {
     n: "01",
     title: "Connect GitHub",
-    desc: "We scan public repos, commits, contributions over 12 months.",
-    glyph: "⌥",
+    desc: "We scan public repos, commits, and contribution history over 12 months.",
+    glyph: "GH",
     accent: "orange",
   },
   {
     n: "02",
     title: "Add Projects",
-    desc: "Pick what you want judged. Repos, deploys, screenshots, demos.",
-    glyph: "◆",
+    desc: "Submit repos and optional live app links.",
+    glyph: "PR",
     accent: "plum",
   },
   {
     n: "03",
-    title: "Verify Proof",
-    desc: "We confirm authorship, originality, and shipping recency.",
-    glyph: "✓",
+    title: "Verify Identity",
+    desc: "Enable email 2FA to mark your account as security-verified.",
+    glyph: "2FA",
     accent: "forest",
   },
   {
     n: "04",
     title: "Analyze Activity",
-    desc: "Code quality, depth, consistency, and community signals.",
-    glyph: "◢",
+    desc: "We evaluate consistency and proof of real shipping.",
+    glyph: "AN",
     accent: "tape",
   },
   {
     n: "05",
     title: "Score Signals",
-    desc: "Weighted scoring across 14 dimensions of real-world dev work.",
-    glyph: "▲",
+    desc: "Weighted scoring across product activity signals.",
+    glyph: "SC",
     accent: "orange-2",
   },
   {
     n: "06",
     title: "Claim Your Tier",
-    desc: "Get your badge, your rank, and unlock challenges + DMs.",
-    glyph: "★",
+    desc: "Tier is assigned from your total score.",
+    glyph: "T",
     accent: "sage",
   },
 ];
@@ -74,27 +67,23 @@ export interface EvaluationSignal {
 }
 
 export const evaluationSignals: EvaluationSignal[] = [
-  { label: "Code shipped", value: "142 commits / 30d", weight: 18, dot: "orange" },
-  { label: "Repo quality", value: "A · clean, tested", weight: 22, dot: "forest" },
-  { label: "Open-source impact", value: "4 PRs to 1k+ repos", weight: 14, dot: "tape" },
-  { label: "Community signal", value: "847 followers", weight: 10, dot: "plum" },
-  { label: "Originality", value: "no forks counted", weight: 12, dot: "orange-2" },
-  { label: "Consistency", value: "14w streak", weight: 16, dot: "sage" },
+  { label: "Code shipped", value: "Commits and PR activity", weight: 18, dot: "orange" },
+  { label: "Repo quality", value: "Project verification and ownership", weight: 22, dot: "forest" },
+  { label: "Open-source impact", value: "Public contribution depth", weight: 14, dot: "tape" },
+  { label: "Community signal", value: "Followers and collaboration", weight: 10, dot: "plum" },
+  { label: "Originality", value: "Verified personal work", weight: 12, dot: "orange-2" },
+  { label: "Consistency", value: "Weekly streak and cadence", weight: 16, dot: "sage" },
 ];
 
 export interface TierLadderRow {
   code: "T0" | "T1" | "T2" | "T3";
-  name: string;
-  range: string;
-  locked?: boolean;
 }
 
-/** Top → bottom, as displayed in the preview ladder. */
 export const tierLadder: TierLadderRow[] = [
-  { code: "T0", name: "Architect", range: "1,800+", locked: true },
-  { code: "T1", name: "Shipper", range: "1,200–1,800" },
-  { code: "T2", name: "Builder", range: "400–1,200" },
-  { code: "T3", name: "Apprentice", range: "0–400" },
+  { code: "T0" },
+  { code: "T1" },
+  { code: "T2" },
+  { code: "T3" },
 ];
 
 export interface VerifyFaq {
@@ -107,25 +96,24 @@ export interface VerifyFaq {
 export const verifyFaqs: VerifyFaq[] = [
   {
     q: "Is it free?",
-    a: "Yes. Verification is free for individuals. Forever.",
+    a: "Yes. Verification is free for individual users.",
     color: "peach",
     tilt: -1.5,
   },
   {
     q: "Can I stay private?",
-    a: "Yes. Show only what you want. Hide your real name. Tier ranks anyway.",
+    a: "Yes. Show only the profile signals you want public.",
     color: "cream",
     tilt: 0.8,
   },
   {
-    q: "How often does it update?",
-    a: "Daily for active accounts. Every 6h during challenges.",
+    q: "How often does score update?",
+    a: "Live score views refresh regularly as new signals arrive.",
     color: "sage",
     tilt: -0.5,
   },
 ];
 
-/** Tilt per step card, by index. Stable, no per-render randomness. */
 export const STEP_TILTS = [-1.5, 1, -0.8, 1.2, -0.6, 0.9];
 
 export const STEP_ACCENT_BG: Record<StepAccent, string> = {
@@ -146,7 +134,6 @@ export const STEP_ACCENT_TEXT: Record<StepAccent, string> = {
   sage: "text-sage",
 };
 
-/** "tape" and "sage" need ink text on the colored sticker. */
 export const STEP_ACCENT_FG: Record<StepAccent, "cream" | "ink"> = {
   orange: "cream",
   "orange-2": "cream",
@@ -155,13 +142,3 @@ export const STEP_ACCENT_FG: Record<StepAccent, "cream" | "ink"> = {
   tape: "ink",
   sage: "ink",
 };
-
-export type Tier = "T0" | "T1" | "T2" | "T3";
-
-const TIER_CODES: ReadonlySet<string> = new Set(["T0", "T1", "T2", "T3"]);
-
-/** Coerce arbitrary tier-code strings to a strict Tier or null. */
-export function toTier(raw: string | null | undefined): Tier | null {
-  if (!raw) return null;
-  return TIER_CODES.has(raw) ? (raw as Tier) : null;
-}

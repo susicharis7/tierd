@@ -226,7 +226,7 @@ export async function getProfileByUserId(userId: string): Promise<ProfileRow | n
   if (!isSupabaseConfigured) return null;
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, username, full_name, avatar_url, created_at, updated_at")
+    .select("id, username, full_name, avatar_url, is_verified, email_2fa_enabled, created_at, updated_at")
     .eq("id", userId)
     .maybeSingle();
 
@@ -275,7 +275,7 @@ export async function updateProfile(
     .from("profiles")
     .update(fields)
     .eq("id", userId)
-    .select("id, username, full_name, avatar_url, created_at, updated_at")
+    .select("id, username, full_name, avatar_url, is_verified, email_2fa_enabled, created_at, updated_at")
     .maybeSingle();
 
   if (error) throw error;

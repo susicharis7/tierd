@@ -1,38 +1,35 @@
-import {
+﻿import {
   Doodle,
   MonoCaption,
   Sticker,
   Tape,
+  type Tier,
 } from "../../../components/tierd";
 import { cn } from "../../../lib/utils";
 import { useAuth } from "../../authFeatures/AuthProvider";
+import {
+  getTierDisplayName,
+  getTierRangeLabel,
+  mapTierToBadge,
+} from "../../rankingFeatures/tierMapping";
 import { useProfileProgressQuery } from "../../rankingFeatures/useRankingData";
 import {
   evaluationSignals,
   STEP_ACCENT_BG,
   tierLadder,
-  toTier,
-  type Tier,
 } from "../getVerifiedData";
 
-/**
- * Side-by-side "evaluation report" preview:
- *  • Left  — cream sticker with weighted-signal bars (the receipts).
- *  • Right — dark tier-preview card with mini ladder. Pulls the signed-in
- *            user's projected tier from `useProfileProgressQuery`; falls back
- *            to T1 for the marketing preview.
- */
 const EvaluationReport = () => {
   const { userId } = useAuth();
   const progressQuery = useProfileProgressQuery(userId);
   const progress = progressQuery.data;
 
-  const projectedTier: Tier = toTier(progress?.tierCode) ?? "T1";
-  const projectedTierName = progress?.tierName ?? "Shipper";
+  const projectedTier: Tier = mapTierToBadge(progress?.tierCode ?? progress?.tierName);
+  const projectedTierName = getTierDisplayName(projectedTier, progress?.tierName);
   const projectedScore = progress?.totalScore ?? null;
 
   return (
-    <section className="py-12">
+    <section className="py-12" id="how-it-works">
       <div className="section-container grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-6">
         <SignalReport />
         <TierPreview
@@ -46,26 +43,20 @@ const EvaluationReport = () => {
 };
 
 const SignalReport = () => (
-  <Sticker
-    color="cream"
-    tilt={-0.8}
-    padding="xl"
-    radius="xl"
-    className="relative"
-  >
+  <Sticker color="cream" tilt={-0.8} padding="xl" radius="xl" className="relative">
     <Tape color="tape" size="md" tilt={5} className="-top-[10px] right-16" />
 
     <div className="flex items-baseline justify-between mb-2">
       <div>
         <MonoCaption tone="muted" className="text-muted-cream text-[10px]">
-          // EVALUATION REPORT — PREVIEW
+          // EVALUATION REPORT PREVIEW
         </MonoCaption>
         <h3 className="font-grot font-extrabold text-[22px] sm:text-[26px] text-ink mt-1.5">
-          what we actually look at
+          what we evaluate
         </h3>
       </div>
       <span className="font-mono-jb text-[10px] uppercase tracking-[0.1em] text-muted-cream hidden sm:inline">
-        14 SIGNALS · WEIGHTED
+        SIGNALS WEIGHTED
       </span>
     </div>
 
@@ -74,24 +65,15 @@ const SignalReport = () => (
         <li key={s.label}>
           <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1.5">
             <div className="flex items-center gap-2.5 min-w-0">
-              <span
-                className={cn("w-1.5 h-1.5 rounded-full", STEP_ACCENT_BG[s.dot])}
-              />
-              <span className="font-grot font-bold text-[14px] text-ink">
-                {s.label}
-              </span>
-              <span className="font-mono-jb text-[11px] text-muted-cream truncate">
-                · {s.value}
-              </span>
+              <span className={cn("w-1.5 h-1.5 rounded-full", STEP_ACCENT_BG[s.dot])} />
+              <span className="font-grot font-bold text-[14px] text-ink">{s.label}</span>
+              <span className="font-mono-jb text-[11px] text-muted-cream truncate">. {s.value}</span>
             </div>
-            <span className="font-mono-jb text-[11px] font-bold text-ink shrink-0">
-              {s.weight}%
-            </span>
+            <span className="font-mono-jb text-[11px] font-bold text-ink shrink-0">{s.weight}%</span>
           </div>
           <div className="h-2 rounded-full bg-ink/[0.08] overflow-hidden">
             <div
               className={cn("h-full rounded-full", STEP_ACCENT_BG[s.dot])}
-              // 14% slot → ~56% width; capped at 100% so high weights still read.
               style={{ width: `${Math.min(100, s.weight * 4)}%` }}
             />
           </div>
@@ -102,8 +84,8 @@ const SignalReport = () => (
     <div className="mt-6 p-3.5 rounded-xl bg-orange/[0.1] border-[1.5px] border-dashed border-orange flex items-center gap-3">
       <Doodle.Asterisk size={20} className="text-orange shrink-0" />
       <p className="font-mono-jb text-[11px] text-muted-cream leading-[1.5]">
-        <b className="text-ink">No followers ≠ no rank.</b> We weight code over
-        clout. Anonymity-friendly: link only what you want public.
+        <b className="text-ink">We weight real work over vanity metrics.</b> Verified ownership and delivery cadence
+        matter most.
       </p>
     </div>
   </Sticker>
@@ -127,29 +109,25 @@ const TierPreview = ({ activeTier, tierName, score }: TierPreviewProps) => {
 
       <MonoCaption tone="orange">// YOUR PROJECTED OUTCOME</MonoCaption>
       <h3 className="font-grot font-extrabold text-[22px] sm:text-[24px] text-cream mt-2 leading-[1.2]">
-        You'd likely land here.
+        You are currently here.
       </h3>
 
       <div className="flex items-baseline gap-3 mt-6">
-        <span className="font-boldonse text-[72px] sm:text-[80px] text-orange leading-none">
-          {activeTier}
-        </span>
+        <span className="font-boldonse text-[72px] sm:text-[80px] text-orange leading-none">{activeTier}</span>
         <div>
-          <p className="font-grot font-extrabold text-[18px] text-cream">
-            Tier {activeTier.slice(1)}
-          </p>
+          <p className="font-grot font-extrabold text-[18px] text-cream">{tierName}</p>
           <p className="font-mono-jb text-[10px] uppercase tracking-[0.08em] text-muted-ink mt-0.5">
-            {score
-              ? `est. score ${score.toLocaleString()}`
-              : "est. score 1,200–1,400"}
+            {score !== null ? `score ${score.toLocaleString()}` : "score pending"}
           </p>
         </div>
       </div>
 
       <div className="mt-7 flex flex-col gap-2">
         {tierLadder.map((row) => {
+          const rowName = getTierDisplayName(row.code);
+          const rowRange = getTierRangeLabel(row.code);
           const current = row.code === activeTier;
-          const locked = row.locked;
+          const locked = row.code === "T0";
           return (
             <div
               key={row.code}
@@ -163,11 +141,7 @@ const TierPreview = ({ activeTier, tierName, score }: TierPreviewProps) => {
               <span
                 className={cn(
                   "font-boldonse text-[13px] min-w-[24px]",
-                  locked
-                    ? "text-muted-ink"
-                    : current
-                      ? "text-orange"
-                      : "text-cream",
+                  locked ? "text-muted-ink" : current ? "text-orange" : "text-cream",
                 )}
               >
                 {row.code}
@@ -178,16 +152,10 @@ const TierPreview = ({ activeTier, tierName, score }: TierPreviewProps) => {
                   locked ? "text-muted-ink" : "text-cream",
                 )}
               >
-                {current ? tierName : row.name}
-                {locked && (
-                  <span className="font-mono-jb text-[10px] text-muted-ink">
-                    🔒
-                  </span>
-                )}
+                {rowName}
+                {locked && <span className="font-mono-jb text-[10px] text-muted-ink">LOCK</span>}
               </span>
-              <span className="font-mono-jb text-[9px] uppercase tracking-[0.1em] text-muted-ink">
-                {row.range}
-              </span>
+              <span className="font-mono-jb text-[9px] uppercase tracking-[0.1em] text-muted-ink">{rowRange}</span>
               {current && (
                 <span className="rounded-[4px] bg-orange text-cream font-mono-jb text-[8px] font-bold px-1.5 py-px">
                   YOU
@@ -200,7 +168,5 @@ const TierPreview = ({ activeTier, tierName, score }: TierPreviewProps) => {
     </div>
   );
 };
-
-export type { Tier };
 
 export default EvaluationReport;

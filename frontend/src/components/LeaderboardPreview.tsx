@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import {
@@ -7,10 +7,10 @@ import {
   StickerBadge,
   TierBadge,
   UserAvatar,
-  type Tier,
 } from "./tierd";
 import { cn } from "../lib/utils";
 import { useLandingTopBuildersQuery } from "../features/rankingFeatures/useRankingData";
+import { mapTierToBadge } from "../features/rankingFeatures/tierMapping";
 
 const tabs = ["Global", "AI", "Web", "Game Dev"] as const;
 const tabDot: Record<(typeof tabs)[number], string> = {
@@ -19,12 +19,6 @@ const tabDot: Record<(typeof tabs)[number], string> = {
   Web: "bg-forest",
   "Game Dev": "bg-orange-2",
 };
-
-function toTier(raw: string | null | undefined): Tier {
-  if (!raw) return "—";
-  if (raw === "T0" || raw === "T1" || raw === "T2" || raw === "T3") return raw;
-  return "—";
-}
 
 const LeaderboardPreview = () => {
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("Global");
@@ -54,15 +48,15 @@ const LeaderboardPreview = () => {
               climb the <span className="text-orange">leaderboard.</span>
             </h2>
             <p className="font-mono-jb text-[13px] text-muted-ink mt-3 max-w-[460px] leading-[1.6]">
-              A public score for private effort. Score weights real signals — code
-              quality, consistency, OSS impact — over follower count.
+              A public score for private effort. Score weights real signals - code
+              quality, consistency, OSS impact - over follower count.
             </p>
           </div>
           <Link
             to="/leaderboard"
             className="self-start sm:self-end rounded-full border border-dashed border-cream/30 text-cream font-mono-jb text-[12px] font-bold px-5 py-2.5 hover:border-cream/50 transition-colors inline-flex items-center gap-2"
           >
-            view full leaderboard →
+            view full leaderboard {"->"}
           </Link>
         </div>
 
@@ -105,7 +99,7 @@ const LeaderboardPreview = () => {
 
           {leaderboardQuery.isPending && (
             <div className="px-5 py-10 font-mono-jb text-[13px] text-muted-ink">
-              Loading leaderboard…
+              Loading leaderboard...
             </div>
           )}
 
@@ -116,7 +110,7 @@ const LeaderboardPreview = () => {
           )}
 
           {leaderboard.map((dev, i) => {
-            const tier = toTier(dev.tierCode ?? dev.tier);
+            const tier = mapTierToBadge(dev.tierCode ?? dev.tier);
             const isLast = i === leaderboard.length - 1;
             const topThree = dev.rank <= 3;
             return (
@@ -162,7 +156,7 @@ const LeaderboardPreview = () => {
                     {dev.score.toLocaleString()}
                   </div>
                   <div className="font-mono-jb text-[10px] font-bold text-forest">
-                    {dev.delta >= 0 ? "↑ +" : "↓ "}
+                    {dev.delta >= 0 ? "up +" : "down "}
                     {dev.delta}
                   </div>
                 </div>

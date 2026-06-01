@@ -9,7 +9,7 @@ export async function fetchProfiles(limit = 20): Promise<ExploreProfile[]> {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, username, full_name, avatar_url, created_at")
+    .select("id, username, full_name, avatar_url, is_verified, email_2fa_enabled, created_at")
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -28,7 +28,7 @@ export async function searchProfiles(query: string, limit = 20): Promise<Explore
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, username, full_name, avatar_url, created_at")
+    .select("id, username, full_name, avatar_url, is_verified, email_2fa_enabled, created_at")
     .or(`full_name.ilike.${term},username.ilike.${term}`)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -267,7 +267,7 @@ export async function fetchProfileByUsername(
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, username, full_name, avatar_url, created_at")
+    .select("id, username, full_name, avatar_url, is_verified, email_2fa_enabled, created_at")
     .eq("username", clean)
     .maybeSingle();
 
@@ -280,7 +280,7 @@ export async function fetchProfileByUsername(
 
   const { data: byId, error: idErr } = await supabase
     .from("profiles")
-    .select("id, username, full_name, avatar_url, created_at")
+    .select("id, username, full_name, avatar_url, is_verified, email_2fa_enabled, created_at")
     .eq("id", clean)
     .maybeSingle();
 

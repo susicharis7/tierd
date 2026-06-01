@@ -78,7 +78,7 @@ function HeatmapGrid({
   const dayLabelStyle = { height: size.cell, lineHeight: `${size.cell}px` };
 
   return (
-    <div className="overflow-x-auto -mx-1 px-1 pb-1">
+    <div className="overflow-x-auto -mx-1 px-1 pb-1 tierd-scrollbar-x">
       <div className="inline-block min-w-full">
         {/* Month labels row */}
         <div

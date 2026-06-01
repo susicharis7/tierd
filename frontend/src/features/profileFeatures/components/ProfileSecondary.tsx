@@ -1,12 +1,9 @@
+﻿import { useState } from "react";
+import { X } from "lucide-react";
 import { Doodle, MonoCaption } from "../../../components/tierd";
 import { cn } from "../../../lib/utils";
-import {
-  BADGE_BG,
-  BADGE_TILTS,
-  PROJECT_ACCENT_BG,
-  mockProjects,
-  profileBadges,
-} from "../profileData";
+import { profileBadges, BADGE_BG, BADGE_TILTS } from "../profileData";
+import type { ProjectRow } from "../../../repositories/projectRepository";
 
 interface ProfileSecondaryProps {
   postsLabel: string;
@@ -15,14 +12,20 @@ interface ProfileSecondaryProps {
   currentScore: number;
   onOpenFollowers: () => void;
   onOpenFollowing: () => void;
+  projects: ProjectRow[];
+  projectsLoading: boolean;
+  canManageProjects: boolean;
+  addingProject: boolean;
+  deletingProjectId: string | null;
+  onAddProject: (input: {
+    name: string;
+    description?: string;
+    repoUrl?: string;
+    liveUrl?: string;
+  }) => Promise<void>;
+  onDeleteProject: (projectId: string) => void;
 }
 
-/**
- * Left-rail content above the posts list. Three stacked sections:
- *   1. Sticker stats row (posts / following / followers / score)
- *   2. Badges sticker book (6 earned badges)
- *   3. Pinned projects (full-width cards)
- */
 const ProfileSecondary = ({
   postsLabel,
   followersCount,
@@ -30,6 +33,13 @@ const ProfileSecondary = ({
   currentScore,
   onOpenFollowers,
   onOpenFollowing,
+  projects,
+  projectsLoading,
+  canManageProjects,
+  addingProject,
+  deletingProjectId,
+  onAddProject,
+  onDeleteProject,
 }: ProfileSecondaryProps) => {
   return (
     <div className="space-y-6">
@@ -42,7 +52,15 @@ const ProfileSecondary = ({
         onOpenFollowing={onOpenFollowing}
       />
       <BadgesCard />
-      <ProjectsSection />
+      <ProjectsSection
+        projects={projects}
+        projectsLoading={projectsLoading}
+        canManageProjects={canManageProjects}
+        addingProject={addingProject}
+        deletingProjectId={deletingProjectId}
+        onAddProject={onAddProject}
+        onDeleteProject={onDeleteProject}
+      />
     </div>
   );
 };
@@ -114,9 +132,7 @@ const StatSticker = ({ label, value, color, tilt, onClick }: StatStickerProps) =
 
   const body = (
     <>
-      <div className="font-boldonse text-[32px] sm:text-[38px] leading-none">
-        {value}
-      </div>
+      <div className="font-boldonse text-[32px] sm:text-[38px] leading-none">{value}</div>
       <div
         className={cn(
           "font-mono-jb font-bold uppercase tracking-[0.1em] text-[9px] mt-2",
@@ -146,14 +162,8 @@ const BadgesCard = () => (
   <div className="rounded-[18px] bg-cream/[0.04] border border-cream/[0.08] p-5 sm:p-6">
     <div className="flex items-center gap-2.5 mb-4 flex-wrap">
       <Doodle.Trophy size={14} className="text-orange" />
-      <MonoCaption tone="cream">
-        // badges · {String(profileBadges.length).padStart(2, "0")} earned
-      </MonoCaption>
+      <MonoCaption tone="cream">// badges . {String(profileBadges.length).padStart(2, "0")} earned</MonoCaption>
       <Doodle.ArrowSquiggle w={40} h={14} className="text-orange" />
-      <div className="flex-1" />
-      <MonoCaption tone="cream" className="text-[9px]">
-        view all
-      </MonoCaption>
     </div>
     <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
       {profileBadges.map((b, i) => {
@@ -168,9 +178,7 @@ const BadgesCard = () => (
             style={{ transform: `rotate(${BADGE_TILTS[i % BADGE_TILTS.length]}deg)` }}
           >
             <div className="text-[24px] leading-none mb-1.5">{b.glyph}</div>
-            <div className="font-grot font-extrabold text-[11px] leading-[1.2]">
-              {b.label}
-            </div>
+            <div className="font-grot font-extrabold text-[11px] leading-[1.2]">{b.label}</div>
             <div
               className={cn(
                 "font-mono-jb text-[8px] uppercase tracking-[0.06em] mt-1",
@@ -186,68 +194,182 @@ const BadgesCard = () => (
   </div>
 );
 
-const ProjectsSection = () => (
-  <section>
-    <div className="flex items-center gap-2.5 mb-4">
-      <Doodle.CodeBracket size={14} className="text-orange" />
-      <MonoCaption tone="cream">// pinned projects</MonoCaption>
-      <div className="flex-1 h-px bg-cream/10" />
-      <MonoCaption tone="cream" className="text-[9px]">
-        {mockProjects.length} of 12
-      </MonoCaption>
-    </div>
-    <div className="flex flex-col gap-2.5">
-      {mockProjects.map((p) => {
-        const lightAccent = p.accent === "tape" || p.accent === "sage";
-        return (
-          <div
-            key={p.name}
-            className="rounded-[14px] bg-ink-2 border border-ink-line p-4 sm:p-[18px] flex items-center gap-4"
+interface ProjectsSectionProps {
+  projects: ProjectRow[];
+  projectsLoading: boolean;
+  canManageProjects: boolean;
+  addingProject: boolean;
+  deletingProjectId: string | null;
+  onAddProject: (input: {
+    name: string;
+    description?: string;
+    repoUrl?: string;
+    liveUrl?: string;
+  }) => Promise<void>;
+  onDeleteProject: (projectId: string) => void;
+}
+
+const ProjectsSection = ({
+  projects,
+  projectsLoading,
+  canManageProjects,
+  addingProject,
+  deletingProjectId,
+  onAddProject,
+  onDeleteProject,
+}: ProjectsSectionProps) => {
+  const [openAdd, setOpenAdd] = useState(false);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [repoUrl, setRepoUrl] = useState("");
+  const [liveUrl, setLiveUrl] = useState("");
+
+  const submitAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await onAddProject({ name, description, repoUrl, liveUrl });
+    setName("");
+    setDescription("");
+    setRepoUrl("");
+    setLiveUrl("");
+    setOpenAdd(false);
+  };
+
+  return (
+    <section>
+      <div className="flex items-center gap-2.5 mb-4">
+        <Doodle.CodeBracket size={14} className="text-orange" />
+        <MonoCaption tone="cream">// submitted projects</MonoCaption>
+        <div className="flex-1 h-px bg-cream/10" />
+        <MonoCaption tone="cream" className="text-[9px]">{projects.length} total</MonoCaption>
+      </div>
+
+      {canManageProjects && (
+        <div className="mb-3">
+          <button
+            type="button"
+            onClick={() => setOpenAdd((v) => !v)}
+            className="inline-flex items-center gap-2 rounded-full border border-dashed border-cream/25 px-3 py-1.5 font-mono-jb text-[11px] uppercase tracking-[0.08em] text-cream hover:border-cream/45"
           >
+            <span className="text-orange">+</span>
+            add project
+          </button>
+        </div>
+      )}
+
+      {openAdd && (
+        <form
+          onSubmit={submitAdd}
+          className="mb-4 rounded-[14px] border border-cream/12 bg-cream/[0.03] p-4 space-y-3"
+        >
+          <input
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Project name"
+            className="w-full rounded-[10px] h-10 px-3 bg-cream/[0.04] border border-cream/15 text-cream font-mono-jb text-[13px]"
+          />
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Short description"
+            rows={2}
+            className="w-full rounded-[10px] px-3 py-2 bg-cream/[0.04] border border-cream/15 text-cream font-mono-jb text-[12px]"
+          />
+          <input
+            value={repoUrl}
+            onChange={(e) => setRepoUrl(e.target.value)}
+            placeholder="GitHub repo URL (optional)"
+            className="w-full rounded-[10px] h-10 px-3 bg-cream/[0.04] border border-cream/15 text-cream font-mono-jb text-[12px]"
+          />
+          <input
+            value={liveUrl}
+            onChange={(e) => setLiveUrl(e.target.value)}
+            placeholder="Live/demo URL (optional)"
+            className="w-full rounded-[10px] h-10 px-3 bg-cream/[0.04] border border-cream/15 text-cream font-mono-jb text-[12px]"
+          />
+          <button
+            type="submit"
+            disabled={addingProject}
+            className="inline-flex items-center justify-center rounded-full bg-orange text-cream font-mono-jb font-bold text-[12px] px-4 py-2 disabled:opacity-60"
+          >
+            {addingProject ? "saving..." : "submit project"}
+          </button>
+        </form>
+      )}
+
+      {projectsLoading ? (
+        <div className="rounded-[14px] border border-ink-line bg-ink-2 p-4 font-mono-jb text-[12px] text-muted-ink">
+          loading projects...
+        </div>
+      ) : projects.length === 0 ? (
+        <div className="rounded-[14px] border border-dashed border-cream/15 bg-cream/[0.03] p-6 text-center font-mono-jb text-[12px] text-muted-ink">
+          no submitted projects yet.
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2.5">
+          {projects.map((p) => (
             <div
-              className={cn(
-                "w-12 h-12 rounded-[12px] flex items-center justify-center font-boldonse text-[20px] shrink-0",
-                PROJECT_ACCENT_BG[p.accent],
-                lightAccent ? "text-ink" : "text-cream",
-              )}
+              key={p.id}
+              className="rounded-[14px] bg-ink-2 border border-ink-line p-4 sm:p-[18px] flex items-start gap-3"
             >
-              {p.name[0]}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="font-grot font-extrabold text-[16px] text-cream truncate">
-                  {p.name}
-                </h3>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/[0.05] border border-cream/15 font-mono-jb text-[9px] text-cream/85 px-2 py-0.5">
-                  <span
-                    className={cn(
-                      "w-[5px] h-[5px] rounded-full",
-                      PROJECT_ACCENT_BG[p.accent],
-                    )}
-                  />
-                  {p.lang}
-                </span>
-                {p.featured && (
-                  <span className="rounded-md bg-orange/15 text-orange border border-orange/30 font-mono-jb text-[9px] font-bold px-1.5 py-0.5">
-                    featured
-                  </span>
-                )}
+              <div className="w-11 h-11 rounded-[10px] bg-cream/[0.06] border border-cream/15 flex items-center justify-center shrink-0">
+                <Doodle.CodeBracket size={14} className="text-cream/80" />
               </div>
-              <p className="font-mono-jb text-[11px] text-muted-ink mt-1 leading-[1.5] truncate">
-                {p.desc}
-              </p>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-grot font-extrabold text-[19px] leading-tight text-cream truncate">{p.name}</h3>
+                  {p.is_verified && (
+                    <span className="rounded-md bg-forest/20 text-sage border border-forest/40 font-mono-jb text-[9px] uppercase tracking-[0.08em] font-bold px-1.5 py-0.5">
+                      verified
+                    </span>
+                  )}
+                </div>
+
+                {p.description && (
+                  <p className="font-mono-jb text-[12px] text-muted-ink mt-1.5 leading-[1.5]">{p.description}</p>
+                )}
+
+                <div className="mt-3 flex items-center gap-2 flex-wrap">
+                  {p.repo_url && (
+                    <a
+                      href={p.repo_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center rounded-full border border-cream/20 px-2.5 py-1 font-mono-jb text-[10px] uppercase tracking-[0.08em] text-cream/85 hover:text-cream"
+                    >
+                      repo
+                    </a>
+                  )}
+                  {p.live_url && (
+                    <a
+                      href={p.live_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center rounded-full border border-cream/20 px-2.5 py-1 font-mono-jb text-[10px] uppercase tracking-[0.08em] text-cream/85 hover:text-cream"
+                    >
+                      live
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {canManageProjects && (
+                <button
+                  type="button"
+                  disabled={deletingProjectId === p.id}
+                  onClick={() => onDeleteProject(p.id)}
+                  className="shrink-0 rounded-full border border-cream/20 w-8 h-8 inline-flex items-center justify-center text-cream/70 hover:text-cream disabled:opacity-50"
+                >
+                  {deletingProjectId === p.id ? "..." : <X size={14} />}
+                </button>
+              )}
             </div>
-            <div className="flex flex-col items-end gap-2 shrink-0">
-              <span className="inline-flex items-center gap-1 font-mono-jb text-[12px] text-cream">
-                <span className="text-orange">✦</span> {p.stars}
-              </span>
-              <Doodle.ArrowSquiggle w={30} h={12} className="text-orange" />
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  </section>
-);
+          ))}
+        </div>
+      )}
+    </section>
+  );
+};
 
 export default ProfileSecondary;

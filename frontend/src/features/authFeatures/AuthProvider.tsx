@@ -1,4 +1,4 @@
-﻿import {
+import {
   createContext,
   useCallback,
   useContext,
@@ -22,15 +22,14 @@ import { findStrategyBySupabaseProvider } from "../../strategies/auth";
 import { externalAccountRepository } from "../../repositories/externalAccountRepository";
 import { oauthTokenRepository } from "../../repositories/oauthTokenRepository";
 import { githubSyncRepository } from "../../repositories/githubSyncRepository";
+import {
+  twoFactorRepository,
+  TwoFactorApiError,
+  type TwoFactorStatus,
+} from "../../repositories/twoFactorRepository";
 import { toast } from "../../components/ui/sonner";
+import { TwoFactorGate } from "./components/TwoFactorGate";
 
-/**
- * Turns a Supabase OAuth callback error into a sentence we'd actually want a
- * user to read. The headline case is `identity_already_exists`, which fires
- * when a user tries to link a GitHub/LinkedIn account that's already attached
- * to a *different* Tierd user — Supabase's default message ("Identity is
- * already linked to another user") is true but unhelpful out of context.
- */
 function humanizeCallbackError(err: OAuthCallbackError): string {
   const strategy = findStrategyBySupabaseProvider(err.pendingProvider);
   const providerName = strategy?.label.replace(/^Continue with /, "") ?? "account";
@@ -49,19 +48,6 @@ function humanizeCallbackError(err: OAuthCallbackError): string {
   return err.errorDescription || `Couldn't complete ${providerName} sign-in.`;
 }
 
-/**
- * Walks every OAuth identity attached to the current Supabase user and mirrors
- * it into our `profile_external_accounts` table. Iterating identities (rather
- * than reading `app_metadata.provider`) is critical for the LINK flow: when a
- * user with an existing email/password account links GitHub, `app_metadata.provider`
- * stays as "email" and the new identity is only visible inside `user.identities`.
- *
- * Idempotent — safe to run on SIGNED_IN, USER_UPDATED, and INITIAL_SESSION.
- *
- * `provider_token` is only present on the OAuth callback that just completed,
- * and Supabase doesn't tell us which provider it belongs to. We stash the
- * intended provider in sessionStorage before the redirect and read it back here.
- */
 async function persistOAuthIdentity(session: Session) {
   const identities = session.user.identities ?? [];
 
@@ -87,7 +73,7 @@ async function persistOAuthIdentity(session: Session) {
   try {
     pendingProviderId = sessionStorage.getItem(PENDING_OAUTH_PROVIDER_KEY);
   } catch {
-    // sessionStorage may be unavailable; fall through to app_metadata fallback.
+    // ignore
   }
 
   const tokenStrategy =
@@ -114,16 +100,26 @@ async function persistOAuthIdentity(session: Session) {
     // ignore
   }
 
-  // Auto-sync GitHub contributions once, right after a fresh GitHub link or
-  // sign-in. We gate on `provider_token` (only present on the callback that
-  // just completed) so this fires once at link time and never on page refresh
-  // or re-hydration. Fire-and-forget — never block the auth flow on it.
   if (tokenStrategy?.id === "github") {
     void githubSyncRepository.syncMe().catch((err) => {
       console.warn("[AuthProvider] auto-sync after GitHub link failed", err);
     });
   }
 }
+
+type TwoFactorState = TwoFactorStatus & {
+  checked: boolean;
+  statusError: string | null;
+};
+
+const DEFAULT_2FA: TwoFactorState = {
+  checked: true,
+  enabled: false,
+  requiresVerification: false,
+  hasTrustedDevice: false,
+  emailMasked: null,
+  statusError: null,
+};
 
 interface AuthContextValue {
   session: Session | null;
@@ -132,38 +128,78 @@ interface AuthContextValue {
   loading: boolean;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  twoFactor: TwoFactorState;
+  refreshTwoFactorStatus: () => Promise<void>;
+  initTwoFactorSetup: () => Promise<void>;
+  verifyTwoFactorSetup: (code: string) => Promise<void>;
+  resendTwoFactorChallenge: () => Promise<void>;
+  verifyTwoFactorChallenge: (code: string, rememberDevice: boolean) => Promise<void>;
+  disableTwoFactor: (code: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+function humanize2faError(err: unknown) {
+  if (err instanceof TwoFactorApiError) return err.message;
+  if (err instanceof Error) return err.message;
+  return "Security check failed.";
+}
+
+function twoFactorSessionKey(userId: string) {
+  return `tierd.2fa.session_verified.${userId}`;
+}
+
+function readTwoFactorSessionVerified(userId: string | null): boolean {
+  if (!userId) return false;
+  try {
+    return sessionStorage.getItem(twoFactorSessionKey(userId)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markTwoFactorSessionVerified(userId: string | null, verified: boolean) {
+  if (!userId) return;
+  try {
+    const key = twoFactorSessionKey(userId);
+    if (verified) {
+      sessionStorage.setItem(key, "1");
+    } else {
+      sessionStorage.removeItem(key);
+    }
+  } catch {
+    // ignore storage failures
+  }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [loading, setLoading] = useState(true);
+  const [twoFactor, setTwoFactor] = useState<TwoFactorState>(DEFAULT_2FA);
+  const [twoFactorSessionVerified, setTwoFactorSessionVerified] = useState(false);
 
   const lastUserIdRef = useRef<string | null>(null);
+  const twoFactorReqIdRef = useRef(0);
 
-  const syncProfile = useCallback(
-    async (uid: string | null) => {
-      lastUserIdRef.current = uid;
+  const syncProfile = useCallback(async (uid: string | null) => {
+    lastUserIdRef.current = uid;
 
-      if (!uid) {
-        setProfile(null);
-        setLoading(false);
-        return;
-      }
+    if (!uid) {
+      setProfile(null);
+      setLoading(false);
+      return;
+    }
 
-      try {
-        const row = await getProfileByUserId(uid);
-        setProfile(row);
-      } catch (err) {
-        console.error("[AuthProvider] profile fetch failed", err);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [],
-  );
+    try {
+      const row = await getProfileByUserId(uid);
+      setProfile(row);
+    } catch (err) {
+      console.error("[AuthProvider] profile fetch failed", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const refreshProfile = useCallback(async () => {
     const uid = lastUserIdRef.current;
@@ -176,11 +212,79 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const syncTwoFactorStatus = useCallback(async (uid: string | null) => {
+    if (!uid) {
+      setTwoFactor(DEFAULT_2FA);
+      setTwoFactorSessionVerified(false);
+      return;
+    }
+
+    const reqId = ++twoFactorReqIdRef.current;
+    setTwoFactor((prev) => ({ ...prev, checked: false, statusError: null }));
+
+    try {
+      const status = await twoFactorRepository.getStatus();
+      if (reqId !== twoFactorReqIdRef.current) return;
+      setTwoFactor({
+        ...status,
+        checked: true,
+        statusError: null,
+      });
+    } catch (err) {
+      if (reqId !== twoFactorReqIdRef.current) return;
+      const message = humanize2faError(err);
+      setTwoFactor((prev) => ({
+        ...prev,
+        checked: true,
+        statusError: message,
+      }));
+    }
+  }, []);
+
+  const refreshTwoFactorStatus = useCallback(async () => {
+    await syncTwoFactorStatus(session?.user?.id ?? null);
+  }, [session?.user?.id, syncTwoFactorStatus]);
+
+  const initTwoFactorSetup = useCallback(async () => {
+    await twoFactorRepository.initSetup();
+    await refreshTwoFactorStatus();
+  }, [refreshTwoFactorStatus]);
+
+  const verifyTwoFactorSetup = useCallback(
+    async (code: string) => {
+      await twoFactorRepository.verifySetup({ code });
+      markTwoFactorSessionVerified(session?.user?.id ?? null, true);
+      setTwoFactorSessionVerified(true);
+      await refreshTwoFactorStatus();
+    },
+    [refreshTwoFactorStatus, session?.user?.id],
+  );
+
+  const resendTwoFactorChallenge = useCallback(async () => {
+    await twoFactorRepository.resendChallenge();
+  }, []);
+
+  const verifyTwoFactorChallenge = useCallback(
+    async (code: string, rememberDevice: boolean) => {
+      await twoFactorRepository.verifyChallenge({ code, rememberDevice });
+      markTwoFactorSessionVerified(session?.user?.id ?? null, true);
+      setTwoFactorSessionVerified(true);
+      await refreshTwoFactorStatus();
+    },
+    [refreshTwoFactorStatus, session?.user?.id],
+  );
+
+  const disableTwoFactor = useCallback(
+    async (code: string) => {
+      await twoFactorRepository.disable({ code });
+      markTwoFactorSessionVerified(session?.user?.id ?? null, false);
+      setTwoFactorSessionVerified(false);
+      await refreshTwoFactorStatus();
+    },
+    [refreshTwoFactorStatus, session?.user?.id],
+  );
+
   useEffect(() => {
-    // Surface OAuth callback errors (e.g. linkIdentity rejected because the
-    // identity belongs to another Tierd user) before anything else runs.
-    // Must happen on mount because Supabase put the info in the URL hash and
-    // the hash gets cleared either by us here or by detectSessionInUrl below.
     const callbackError = consumeOAuthCallbackError();
     if (callbackError) {
       toast.error(humanizeCallbackError(callbackError));
@@ -193,7 +297,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const sess = await getSession();
         if (!mounted) return;
         setSession(sess);
-        await syncProfile(sess?.user?.id ?? null);
+        setTwoFactorSessionVerified(readTwoFactorSessionVerified(sess?.user?.id ?? null));
+        await Promise.all([
+          syncProfile(sess?.user?.id ?? null),
+          syncTwoFactorStatus(sess?.user?.id ?? null),
+        ]);
       } catch {
         if (mounted) setLoading(false);
       }
@@ -208,14 +316,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === "TOKEN_REFRESHED") return;
 
       setSession(sess);
+      if (!sess?.user?.id) {
+        markTwoFactorSessionVerified(lastUserIdRef.current, false);
+        setTwoFactorSessionVerified(false);
+      } else {
+        setTwoFactorSessionVerified(readTwoFactorSessionVerified(sess.user.id));
+      }
       void syncProfile(sess?.user?.id ?? null);
+      void syncTwoFactorStatus(sess?.user?.id ?? null);
 
-      // SIGNED_IN: initial OAuth sign-in or password login.
-      // USER_UPDATED: fires after linkIdentity completes — same persistence path,
-      //   since the session now carries the newly linked identity + its provider_token.
-      // INITIAL_SESSION: covers the case where a page refresh follows a link flow
-      //   whose USER_UPDATED event was missed; upsert is idempotent so the extra
-      //   work is harmless.
       if (
         (event === "SIGNED_IN" ||
           event === "USER_UPDATED" ||
@@ -230,22 +339,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [syncProfile]);
+  }, [syncProfile, syncTwoFactorStatus]);
 
   const logout = useCallback(async () => {
+    const uid = session?.user?.id ?? null;
     await doLogout();
+    markTwoFactorSessionVerified(uid, false);
     setSession(null);
     setProfile(null);
+    setTwoFactor(DEFAULT_2FA);
+    setTwoFactorSessionVerified(false);
     lastUserIdRef.current = null;
-  }, []);
+  }, [session?.user?.id]);
 
   const userId = session?.user?.id ?? lastUserIdRef.current;
 
+  const shouldBlockForTwoFactor =
+    Boolean(session) &&
+    twoFactor.checked &&
+    twoFactor.enabled &&
+    twoFactor.requiresVerification &&
+    !twoFactorSessionVerified;
+
   return (
     <AuthContext.Provider
-      value={{ session, userId, profile, loading, logout, refreshProfile }}
+      value={{
+        session,
+        userId,
+        profile,
+        loading,
+        logout,
+        refreshProfile,
+        twoFactor,
+        refreshTwoFactorStatus,
+        initTwoFactorSetup,
+        verifyTwoFactorSetup,
+        resendTwoFactorChallenge,
+        verifyTwoFactorChallenge,
+        disableTwoFactor,
+      }}
     >
       {children}
+      {shouldBlockForTwoFactor && (
+        <TwoFactorGate
+          emailMasked={twoFactor.emailMasked}
+          statusError={twoFactor.statusError}
+          onVerify={verifyTwoFactorChallenge}
+          onResend={resendTwoFactorChallenge}
+        />
+      )}
     </AuthContext.Provider>
   );
 }

@@ -11,6 +11,7 @@ import LeaderboardPage from "../pages/LeaderboardPage";
 import ProfilePage from "../pages/ProfilePage";
 import ChallengesPage from "../pages/ChallengesPage";
 import GetVerifiedPage from "../pages/GetVerifiedPage";
+import SecurityPage from "../pages/SecurityPage";
 import DesignSystemPage from "../pages/DesignSystemPage";
 import NotFoundPage from "../pages/NotFoundPage";
 
@@ -49,6 +50,7 @@ export default function App() {
               <Route path="/profile/:username" element={<ProfilePage />} />
               <Route path="/challenges" element={<ChallengesPage />} />
               <Route path="/get-verified" element={<GetVerifiedPage />} />
+              <Route path="/security" element={<SecurityPage />} />
               <Route path="/design-system" element={<DesignSystemPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>

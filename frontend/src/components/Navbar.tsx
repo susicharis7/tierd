@@ -165,7 +165,14 @@ const Navbar = () => {
                   onClick={() => navigate(profileHref)}
                 >
                   <UserCog size={14} />
-                  Edit profile
+                  My Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="cursor-pointer gap-2 font-grot text-[13px]"
+                  onClick={() => navigate("/security")}
+                >
+                  <Doodle.Pulse size={14} className="text-orange" />
+                  Security
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -293,6 +300,15 @@ const Navbar = () => {
                         )}
                       </div>
                     </Link>
+                    <button
+                      onClick={() => {
+                        setMobileOpen(false);
+                        navigate("/security");
+                      }}
+                      className="font-mono-jb text-[12px] font-bold text-cream/70 hover:text-cream px-4 py-2 text-left"
+                    >
+                      security
+                    </button>
                     <button
                       onClick={() => {
                         setMobileOpen(false);

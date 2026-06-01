@@ -26,6 +26,11 @@ import {
   useFollowingListQuery,
   useToggleFollowMutation,
 } from "../useProfileSocialData";
+import {
+  useCreateProjectMutation,
+  useDeleteProjectMutation,
+  useProjectsQuery,
+} from "../useProjects";
 import type { TechOption } from "../profileData";
 import { LinkedProvidersSection } from "./LinkedProvidersSection";
 import { useGithubLanguages } from "../useGithubLanguages";
@@ -69,12 +74,21 @@ const ProfilePageContent = () => {
   const profile = isOwnProfile
     ? authProfile
     : externalProfileQuery.data ?? null;
+  const isProfileUnlocked = Boolean(profile?.is_verified);
+  const hasVerifiedBadge = Boolean(profile?.email_2fa_enabled);
 
   const resolvedUserId = isOwnProfile
     ? authUserId
     : externalProfileQuery.data?.id ?? null;
 
   const userPostsQuery = useUserPostsInfiniteQuery(authUserId, resolvedUserId);
+  const projectsQuery = useProjectsQuery(resolvedUserId);
+  const createProjectMutation = useCreateProjectMutation(
+    isOwnProfile ? authUserId : null,
+  );
+  const deleteProjectMutation = useDeleteProjectMutation(
+    isOwnProfile ? authUserId : null,
+  );
   const profileProgressQuery = useProfileProgressQuery(resolvedUserId);
   const profileProgress = profileProgressQuery.data ?? null;
   const followStateQuery = useFollowStateQuery(
@@ -239,6 +253,20 @@ const ProfilePageContent = () => {
     followMutation.mutate(Boolean(followStateQuery.data?.isFollowing));
   };
 
+  const handleAddProject = async (input: {
+    name: string;
+    description?: string;
+    repoUrl?: string;
+    liveUrl?: string;
+  }) => {
+    await createProjectMutation.mutateAsync(input);
+  };
+
+  const handleDeleteProject = (projectId: string) => {
+    if (deleteProjectMutation.isPending) return;
+    deleteProjectMutation.mutate(projectId);
+  };
+
   return (
     <div className="min-h-screen bg-ink text-cream font-grot relative">
       <Navbar />
@@ -276,6 +304,8 @@ const ProfilePageContent = () => {
             followPending={followMutation.isPending}
             onEdit={() => setEditOpen(true)}
             onToggleFollow={handleToggleFollow}
+            isUnlocked={isProfileUnlocked}
+            isVerifiedBadge={hasVerifiedBadge}
           />
         </motion.section>
 
@@ -291,6 +321,13 @@ const ProfilePageContent = () => {
                 currentScore={currentScore}
                 onOpenFollowers={() => setFollowersOpen(true)}
                 onOpenFollowing={() => setFollowingOpen(true)}
+                projects={projectsQuery.data ?? []}
+                projectsLoading={projectsQuery.isPending}
+                canManageProjects={isOwnProfile}
+                addingProject={createProjectMutation.isPending}
+                deletingProjectId={deleteProjectMutation.variables ?? null}
+                onAddProject={handleAddProject}
+                onDeleteProject={handleDeleteProject}
               />
 
               {isOwnProfile && (

@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+﻿import { useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 
 import Navbar from "../../../components/Navbar";
 import Footer from "../../../components/Footer";
@@ -16,6 +17,23 @@ const FAQ_BG: Record<"peach" | "cream" | "sage", string> = {
 };
 
 const GetVerifiedPageContent = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    const hash = location.hash?.replace(/^#/, "");
+    if (!hash) {
+      window.scrollTo({ top: 0, behavior: "auto" });
+      return;
+    }
+
+    const target = document.getElementById(hash);
+    if (!target) return;
+
+    const navOffset = 110;
+    const y = target.getBoundingClientRect().top + window.scrollY - navOffset;
+    window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+  }, [location.pathname, location.hash]);
+
   return (
     <div className="min-h-screen bg-ink text-cream font-grot relative">
       <Navbar />
@@ -45,15 +63,9 @@ const FaqSection = () => (
             )}
             style={{ transform: `rotate(${f.tilt}deg)` }}
           >
-            <span className="absolute -top-2 left-4 font-boldonse text-[18px] text-orange">
-              ?
-            </span>
-            <h3 className="font-grot font-extrabold text-[16px] mb-1.5">
-              {f.q}
-            </h3>
-            <p className="font-mono-jb text-[11px] text-muted-cream leading-[1.55]">
-              {f.a}
-            </p>
+            <span className="absolute -top-2 left-4 font-boldonse text-[18px] text-orange">?</span>
+            <h3 className="font-grot font-extrabold text-[16px] mb-1.5">{f.q}</h3>
+            <p className="font-mono-jb text-[11px] text-muted-cream leading-[1.55]">{f.a}</p>
           </div>
         ))}
       </div>
@@ -77,7 +89,7 @@ const FinalCTA = () => (
         your profile is your <span className="text-orange">proof.</span>
       </h2>
       <p className="font-mono-jb text-[13px] text-cream/75 mt-5 max-w-[520px] mx-auto leading-[1.6]">
-        Connect your work, get evaluated, and claim your rank on the ladder.
+        Connect your work, get evaluated, and claim your rank on the leaderboard.
       </p>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <button
@@ -91,7 +103,7 @@ const FinalCTA = () => (
           to="/leaderboard"
           className="inline-flex items-center rounded-full border-[1.5px] border-dashed border-cream/30 text-cream font-mono-jb text-[13px] font-bold px-7 py-3.5 hover:border-cream/50 transition-colors"
         >
-          explore leaderboard →
+          explore leaderboard
         </Link>
       </div>
     </div>

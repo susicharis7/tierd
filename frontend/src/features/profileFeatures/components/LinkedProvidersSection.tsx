@@ -145,7 +145,11 @@ export function LinkedProvidersSection() {
                       onClick={handleSyncGithub}
                       className="rounded-md border border-border/60 px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-muted/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {githubSyncing ? "Syncing…" : "Sync"}
+                      {githubSyncing
+                        ? "Syncing…"
+                        : row?.last_synced_at
+                          ? "Synced"
+                          : "Sync"}
                     </button>
                   )}
                   <button

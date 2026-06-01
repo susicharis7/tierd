@@ -10,6 +10,7 @@ import ExplorePage from "../pages/ExplorePage";
 import LeaderboardPage from "../pages/LeaderboardPage";
 import ProfilePage from "../pages/ProfilePage";
 import ChallengesPage from "../pages/ChallengesPage";
+import ChallengeDetailPage from "../pages/ChallengeDetailPage";
 import GetVerifiedPage from "../pages/GetVerifiedPage";
 import SecurityPage from "../pages/SecurityPage";
 import DesignSystemPage from "../pages/DesignSystemPage";
@@ -49,6 +50,7 @@ export default function App() {
               <Route path="/leaderboard" element={<LeaderboardPage />} />
               <Route path="/profile/:username" element={<ProfilePage />} />
               <Route path="/challenges" element={<ChallengesPage />} />
+              <Route path="/challenges/:challengeId" element={<ChallengeDetailPage />} />
               <Route path="/get-verified" element={<GetVerifiedPage />} />
               <Route path="/security" element={<SecurityPage />} />
               <Route path="/design-system" element={<DesignSystemPage />} />

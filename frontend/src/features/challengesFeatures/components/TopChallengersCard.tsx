@@ -10,10 +10,6 @@ interface TopChallengersCardProps {
   limit?: number;
 }
 
-/**
- * Sidebar card listing top challenge winners. Pulls from the
- * `challenge_top_challengers` view via `useTopChallengersQuery`.
- */
 const TopChallengersCard = ({ limit = 5 }: TopChallengersCardProps) => {
   const query = useTopChallengersQuery(limit);
   const challengers = query.data ?? [];
@@ -27,7 +23,7 @@ const TopChallengersCard = ({ limit = 5 }: TopChallengersCardProps) => {
 
       {query.isPending && (
         <p className="font-mono-jb text-[12px] text-muted-ink py-2">
-          Loading top challengers…
+          Loading top challengers...
         </p>
       )}
 
@@ -46,7 +42,7 @@ const TopChallengersCard = ({ limit = 5 }: TopChallengersCardProps) => {
                 i < 3 ? "text-orange" : "text-muted-ink",
               )}
             >
-              0{u.rank}
+              {String(u.rank).padStart(2, "0")}
             </span>
             <UserAvatar
               name={u.fullName || u.username}
@@ -58,7 +54,7 @@ const TopChallengersCard = ({ limit = 5 }: TopChallengersCardProps) => {
                 {u.fullName}
               </p>
               <p className="font-mono-jb text-[10px] uppercase tracking-[0.08em] text-muted-ink">
-                {u.winsCount} wins · {u.totalAwardedPoints.toLocaleString()} pts
+                {u.winsCount} wins | {u.totalAwardedPoints.toLocaleString()} pts
               </p>
             </div>
           </div>

@@ -315,6 +315,7 @@ const ProfilePageContent = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-7 items-start">
             <main className="lg:col-span-7 min-w-0 space-y-6">
               <ProfileSecondary
+                userId={resolvedUserId}
                 postsLabel={postsCountLabel}
                 followersCount={followersCount}
                 followingCount={followingCount}

@@ -1,11 +1,18 @@
-﻿import { useState } from "react";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import { X } from "lucide-react";
 import { Doodle, MonoCaption } from "../../../components/tierd";
 import { cn } from "../../../lib/utils";
+import {
+  formatChallengeStartsIn,
+  formatChallengeTimeLeft,
+  useMyActiveChallengeQuery,
+} from "../../challengesFeatures/useChallengesData";
 import { profileBadges, BADGE_BG, BADGE_TILTS } from "../profileData";
 import type { ProjectRow } from "../../../repositories/projectRepository";
 
 interface ProfileSecondaryProps {
+  userId: string | null;
   postsLabel: string;
   followersCount: number;
   followingCount: number;
@@ -27,6 +34,7 @@ interface ProfileSecondaryProps {
 }
 
 const ProfileSecondary = ({
+  userId,
   postsLabel,
   followersCount,
   followingCount,
@@ -52,6 +60,7 @@ const ProfileSecondary = ({
         onOpenFollowing={onOpenFollowing}
       />
       <BadgesCard />
+      <ActiveChallengeCard userId={userId} />
       <ProjectsSection
         projects={projects}
         projectsLoading={projectsLoading}
@@ -61,6 +70,46 @@ const ProfileSecondary = ({
         onAddProject={onAddProject}
         onDeleteProject={onDeleteProject}
       />
+    </div>
+  );
+};
+
+const ActiveChallengeCard = ({ userId }: { userId: string | null }) => {
+  const query = useMyActiveChallengeQuery(userId);
+  const challenge = query.data;
+
+  const timer = challenge
+    ? challenge.phase === "upcoming"
+      ? formatChallengeStartsIn(challenge.starts_at)
+      : formatChallengeTimeLeft(challenge.ends_at)
+    : null;
+
+  return (
+    <div className="rounded-[18px] bg-cream/[0.04] border border-cream/[0.08] p-5 sm:p-6">
+      <div className="flex items-center gap-2.5 mb-3">
+        <Doodle.Bolt size={14} className="text-orange" />
+        <MonoCaption tone="cream">// active challenge</MonoCaption>
+      </div>
+      {challenge ? (
+        <>
+          <p className="font-grot font-extrabold text-[20px] leading-tight text-cream">
+            {challenge.title}
+          </p>
+          <p className="font-mono-jb text-[11px] text-muted-ink mt-2">
+            {challenge.phase === "upcoming" ? "starts in" : "ends in"} {timer ?? "-"}
+          </p>
+          <Link
+            to={`/challenges/${challenge.id}`}
+            className="inline-flex mt-3 rounded-full bg-orange text-cream font-mono-jb font-bold text-[11px] px-3.5 py-1.5"
+          >
+            open challenge
+          </Link>
+        </>
+      ) : (
+        <p className="font-mono-jb text-[12px] text-muted-ink">
+          no active challenges joined.
+        </p>
+      )}
     </div>
   );
 };

@@ -10,10 +10,6 @@ interface ChallengesHeroProps {
   totalParticipants: string;
 }
 
-/**
- * Page header — sticker kicker, two-line Boldonse "compete. ship. climb.",
- * subtitle, primary + ghost CTAs, plus two tilted stat stickers on the right.
- */
 const ChallengesHero = ({
   activeCount,
   totalParticipants,
@@ -48,14 +44,8 @@ const ChallengesHero = ({
             className="inline-flex items-center gap-2 rounded-full bg-orange text-cream font-mono-jb text-[13px] font-bold px-7 py-3.5 shadow-cta-orange hover:translate-y-px transition-transform"
           >
             <Doodle.Bolt size={14} />
-            browse active challenges →
+            browse active challenges
           </a>
-          <button
-            type="button"
-            className="inline-flex items-center rounded-full border-[1.5px] border-dashed border-cream/30 text-cream font-mono-jb text-[13px] font-bold px-7 py-3.5 hover:border-cream/50 transition-colors"
-          >
-            + create a challenge
-          </button>
         </div>
       </div>
 

@@ -1,4 +1,10 @@
 import { Sticker, Tape } from "../../../components/tierd";
+import { Link } from "react-router-dom";
+import {
+  formatChallengeStartsIn,
+  formatChallengeTimeLeft,
+  useMyActiveChallengeQuery,
+} from "../../challengesFeatures/useChallengesData";
 import { useProfileProgressQuery } from "../../rankingFeatures/useRankingData";
 import {
   CommunitiesPanel,
@@ -20,6 +26,15 @@ export function ExploreLeftSidebar({
   authLoading,
   currentProfile,
 }: ExploreLeftSidebarProps) {
+  const activeChallengeQuery = useMyActiveChallengeQuery(userId);
+
+  const activeChallenge = activeChallengeQuery.data;
+  const challengeTimer = activeChallenge
+    ? activeChallenge.phase === "upcoming"
+      ? formatChallengeStartsIn(activeChallenge.starts_at)
+      : formatChallengeTimeLeft(activeChallenge.ends_at)
+    : null;
+
   return (
     <aside className="hidden lg:block space-y-5 lg:sticky lg:top-[160px] self-start">
       {userId && currentProfile ? (
@@ -40,6 +55,33 @@ export function ExploreLeftSidebar({
           </button>
         </div>
       ) : null}
+
+      <div className="rounded-[14px] border border-cream/[0.08] bg-cream/[0.03] p-4">
+        <p className="font-mono-jb text-[10px] uppercase tracking-[0.08em] text-cream/70 mb-2">
+          // challenge
+        </p>
+        {userId && activeChallenge ? (
+          <>
+            <p className="font-grot font-extrabold text-[15px] text-cream leading-tight">
+              {activeChallenge.title}
+            </p>
+            <p className="font-mono-jb text-[10px] text-muted-ink mt-2">
+              {activeChallenge.phase === "upcoming" ? "starts in" : "ends in"}{" "}
+              {challengeTimer ?? "-"}
+            </p>
+            <Link
+              to={`/challenges/${activeChallenge.id}`}
+              className="inline-flex mt-3 rounded-full bg-orange text-cream font-mono-jb text-[11px] font-bold px-3.5 py-1.5"
+            >
+              open challenge
+            </Link>
+          </>
+        ) : (
+          <p className="font-mono-jb text-[11px] text-muted-ink">
+            no challenges
+          </p>
+        )}
+      </div>
 
       <CommunitiesPanel isLoggedIn={!!userId} />
 

@@ -22,6 +22,7 @@ export type ChallengeOverviewRow = {
   submissions_count: number;
   winners_count: number;
   phase: ChallengePhase;
+  metadata: Record<string, unknown>;
 };
 
 export type ChallengeParticipantRow = {
@@ -31,6 +32,10 @@ export type ChallengeParticipantRow = {
   username: string | null;
   full_name: string | null;
   avatar_url: string | null;
+};
+
+export type ChallengeParticipantWithSubmissionStatus = ChallengeParticipantRow & {
+  submission_status: "joined" | "submitted" | "under_review" | "completed" | "expired";
 };
 
 export type ChallengeLeaderboardRow = {
@@ -44,7 +49,38 @@ export type ChallengeLeaderboardRow = {
   source: "winners" | "submissions" | "participants";
 };
 
+export type ChallengeSubmissionStatus =
+  | "draft"
+  | "submitted"
+  | "reviewed"
+  | "rejected"
+  | "winner";
+
+export type ChallengeSubmissionRow = {
+  id: string;
+  challenge_id: string;
+  profile_id: string;
+  description: string | null;
+  repo_url: string | null;
+  demo_url: string | null;
+  status: ChallengeSubmissionStatus;
+  submitted_at: string;
+  updated_at: string;
+  metadata: Record<string, unknown>;
+};
+
+export type UpsertChallengeSubmissionInput = {
+  challengeId: string;
+  profileId: string;
+  repoUrl: string;
+  demoUrl?: string;
+  description: string;
+  testCommand: string;
+  demoVideoUrl?: string;
+};
+
 function mapOverviewRow(row: Record<string, unknown>): ChallengeOverviewRow {
+  const metadataRaw = row.metadata;
   return {
     id: (row.id as string | null) ?? "",
     slug: (row.slug as string | null) ?? null,
@@ -65,6 +101,29 @@ function mapOverviewRow(row: Record<string, unknown>): ChallengeOverviewRow {
     submissions_count: (row.submissions_count as number | null) ?? 0,
     winners_count: (row.winners_count as number | null) ?? 0,
     phase: ((row.phase as ChallengePhase | null) ?? "past") as ChallengePhase,
+    metadata:
+      metadataRaw && typeof metadataRaw === "object"
+        ? (metadataRaw as Record<string, unknown>)
+        : {},
+  };
+}
+
+function mapSubmissionRow(row: Record<string, unknown>): ChallengeSubmissionRow {
+  const metadataRaw = row.metadata;
+  return {
+    id: (row.id as string | null) ?? "",
+    challenge_id: (row.challenge_id as string | null) ?? "",
+    profile_id: (row.profile_id as string | null) ?? "",
+    description: (row.description as string | null) ?? null,
+    repo_url: (row.repo_url as string | null) ?? null,
+    demo_url: (row.demo_url as string | null) ?? null,
+    status: ((row.status as ChallengeSubmissionStatus | null) ?? "submitted"),
+    submitted_at: (row.submitted_at as string | null) ?? new Date().toISOString(),
+    updated_at: (row.updated_at as string | null) ?? new Date().toISOString(),
+    metadata:
+      metadataRaw && typeof metadataRaw === "object"
+        ? (metadataRaw as Record<string, unknown>)
+        : {},
   };
 }
 
@@ -77,7 +136,7 @@ export const challengeRepository = {
     let query = supabase
       .from("challenge_public_overview")
       .select(
-        "id, slug, title, description, rules, category, difficulty, scope, scope_key, status, is_featured, reward_points, max_participants, starts_at, ends_at, participants_count, submissions_count, winners_count, phase",
+        "id, slug, title, description, rules, category, difficulty, scope, scope_key, status, is_featured, reward_points, max_participants, starts_at, ends_at, participants_count, submissions_count, winners_count, phase, metadata",
       )
       .order("starts_at", { ascending: false });
 
@@ -102,7 +161,7 @@ export const challengeRepository = {
     const { data, error } = await supabase
       .from("challenge_public_overview")
       .select(
-        "id, slug, title, description, rules, category, difficulty, scope, scope_key, status, is_featured, reward_points, max_participants, starts_at, ends_at, participants_count, submissions_count, winners_count, phase",
+        "id, slug, title, description, rules, category, difficulty, scope, scope_key, status, is_featured, reward_points, max_participants, starts_at, ends_at, participants_count, submissions_count, winners_count, phase, metadata",
       )
       .eq("id", challengeId)
       .maybeSingle();
@@ -140,6 +199,34 @@ export const challengeRepository = {
     });
   },
 
+  async listParticipantsWithSubmissionStatus(
+    challengeId: string,
+  ): Promise<ChallengeParticipantWithSubmissionStatus[]> {
+    const { data, error } = await supabase
+      .from("challenge_participants_with_state")
+      .select(
+        "challenge_id, profile_id, username, full_name, avatar_url, joined_at, participant_status, submission_status, user_state",
+      )
+      .eq("challenge_id", challengeId)
+      .order("joined_at", { ascending: true });
+
+    if (error) throw error;
+
+    return (data ?? []).map((row) => ({
+      profile_id: (row.profile_id as string | null) ?? "",
+      status:
+        ((row.participant_status as ChallengeParticipantRow["status"] | null) ??
+          "joined"),
+      joined_at: (row.joined_at as string | null) ?? new Date().toISOString(),
+      username: (row.username as string | null) ?? null,
+      full_name: (row.full_name as string | null) ?? null,
+      avatar_url: (row.avatar_url as string | null) ?? null,
+      submission_status:
+        ((row.user_state as ChallengeParticipantWithSubmissionStatus["submission_status"] | null) ??
+          "joined"),
+    }));
+  },
+
   async listLeaderboard(challengeId: string): Promise<ChallengeLeaderboardRow[]> {
     const { data, error } = await supabase
       .from("challenge_live_leaderboard")
@@ -172,6 +259,52 @@ export const challengeRepository = {
       .select("challenge_id, profile_id, status, joined_at")
       .eq("challenge_id", challengeId)
       .eq("profile_id", profileId)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+
+  async getMySubmission(
+    challengeId: string,
+    profileId: string,
+  ): Promise<ChallengeSubmissionRow | null> {
+    const { data, error } = await supabase
+      .from("challenge_submissions")
+      .select(
+        "id, challenge_id, profile_id, description, repo_url, demo_url, status, submitted_at, updated_at, metadata",
+      )
+      .eq("challenge_id", challengeId)
+      .eq("profile_id", profileId)
+      .order("updated_at", { ascending: false })
+      .limit(1);
+
+    if (error) throw error;
+    if (!data || data.length === 0) return null;
+    return mapSubmissionRow(data[0] as Record<string, unknown>);
+  },
+
+  async upsertSubmission(
+    input: UpsertChallengeSubmissionInput,
+  ): Promise<ChallengeSubmissionRow> {
+    const { data, error } = await supabase.rpc("submit_challenge_submission", {
+      p_challenge_id: input.challengeId,
+      p_repo_url: input.repoUrl,
+      p_demo_url: input.demoUrl ?? null,
+      p_description: input.description,
+      p_test_command: input.testCommand,
+      p_demo_video_url: input.demoVideoUrl ?? null,
+    });
+    if (error) throw error;
+    return mapSubmissionRow(data as Record<string, unknown>);
+  },
+
+  async getMyChallengeState(challengeId: string) {
+    const { data, error } = await supabase
+      .from("challenge_my_state")
+      .select(
+        "challenge_id, profile_id, has_joined, has_submission, submission_status, is_winner, user_state, can_join, can_submit, can_update_submission",
+      )
+      .eq("challenge_id", challengeId)
       .maybeSingle();
     if (error) throw error;
     return data;

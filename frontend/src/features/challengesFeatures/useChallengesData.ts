@@ -3,6 +3,7 @@ import { toast } from "../../components/ui/sonner";
 import {
   challengeRepository,
   type ChallengePhase,
+  type UpsertChallengeSubmissionInput,
 } from "../../repositories/challengeRepository";
 
 const CHALLENGES_STALE_MS = 20_000;
@@ -14,12 +15,18 @@ export const challengeKeys = {
     ["challenges", "detail", challengeId] as const,
   participants: (challengeId: string | null) =>
     ["challenges", "participants", challengeId] as const,
+  participantsStatus: (challengeId: string | null) =>
+    ["challenges", "participants-status", challengeId] as const,
   leaderboard: (challengeId: string | null) =>
     ["challenges", "leaderboard", challengeId] as const,
   mineActive: (profileId: string | null) =>
     ["challenges", "mine-active", profileId] as const,
   mineParticipation: (challengeId: string | null, profileId: string | null) =>
     ["challenges", "mine-participation", challengeId, profileId] as const,
+  mineState: (challengeId: string | null) =>
+    ["challenges", "mine-state", challengeId] as const,
+  mineSubmission: (challengeId: string | null, profileId: string | null) =>
+    ["challenges", "mine-submission", challengeId, profileId] as const,
 };
 
 export function useChallengesOverviewQuery(phase: ChallengePhase | "all", limit = 30) {
@@ -47,6 +54,15 @@ export function useChallengeParticipantsQuery(challengeId: string | null) {
   return useQuery({
     queryKey: challengeKeys.participants(challengeId),
     queryFn: () => challengeRepository.listParticipants(challengeId!),
+    enabled: Boolean(challengeId),
+    staleTime: CHALLENGES_STALE_MS,
+  });
+}
+
+export function useChallengeParticipantsStatusQuery(challengeId: string | null) {
+  return useQuery({
+    queryKey: challengeKeys.participantsStatus(challengeId),
+    queryFn: () => challengeRepository.listParticipantsWithSubmissionStatus(challengeId!),
     enabled: Boolean(challengeId),
     staleTime: CHALLENGES_STALE_MS,
   });
@@ -82,6 +98,27 @@ export function useMyChallengeParticipationQuery(
   });
 }
 
+export function useMyChallengeStateQuery(challengeId: string | null, enabled = true) {
+  return useQuery({
+    queryKey: challengeKeys.mineState(challengeId),
+    queryFn: () => challengeRepository.getMyChallengeState(challengeId!),
+    enabled: Boolean(challengeId) && enabled,
+    staleTime: CHALLENGES_STALE_MS,
+  });
+}
+
+export function useMyChallengeSubmissionQuery(
+  challengeId: string | null,
+  profileId: string | null,
+) {
+  return useQuery({
+    queryKey: challengeKeys.mineSubmission(challengeId, profileId),
+    queryFn: () => challengeRepository.getMySubmission(challengeId!, profileId!),
+    enabled: Boolean(challengeId && profileId),
+    staleTime: CHALLENGES_STALE_MS,
+  });
+}
+
 export function useJoinChallengeMutation(profileId: string | null) {
   const queryClient = useQueryClient();
 
@@ -99,13 +136,57 @@ export function useJoinChallengeMutation(profileId: string | null) {
         queryClient.invalidateQueries({
           queryKey: challengeKeys.mineParticipation(challengeId, profileId),
         }),
+        queryClient.invalidateQueries({ queryKey: challengeKeys.mineState(challengeId) }),
         queryClient.invalidateQueries({ queryKey: challengeKeys.mineActive(profileId) }),
+        queryClient.invalidateQueries({
+          queryKey: challengeKeys.participantsStatus(challengeId),
+        }),
         queryClient.invalidateQueries({ queryKey: ["challenges", "overview"] }),
       ]);
       toast("Joined challenge.");
     },
     onError: (err) => {
       const message = err instanceof Error ? err.message : "Could not join challenge.";
+      toast(message);
+    },
+  });
+}
+
+export function useSubmitChallengeMutation(
+  challengeId: string | null,
+  profileId: string | null,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (
+      input: Omit<UpsertChallengeSubmissionInput, "challengeId" | "profileId">,
+    ) => {
+      if (!challengeId || !profileId) {
+        throw new Error("Missing challenge or user context.");
+      }
+      return challengeRepository.upsertSubmission({
+        challengeId,
+        profileId,
+        ...input,
+      });
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: challengeKeys.mineSubmission(challengeId, profileId),
+        }),
+        queryClient.invalidateQueries({ queryKey: challengeKeys.mineState(challengeId) }),
+        queryClient.invalidateQueries({
+          queryKey: challengeKeys.participantsStatus(challengeId),
+        }),
+        queryClient.invalidateQueries({ queryKey: challengeKeys.leaderboard(challengeId) }),
+      ]);
+      toast("Submission saved.");
+    },
+    onError: (err) => {
+      const message =
+        err instanceof Error ? err.message : "Could not save submission.";
       toast(message);
     },
   });
@@ -132,4 +213,3 @@ export function formatChallengeStartsIn(startsAtIso: string): string | null {
   const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
   return `${days}d ${hours}h`;
 }
-

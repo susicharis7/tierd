@@ -41,7 +41,7 @@ export type ChallengeLeaderboardRow = {
   position: number | null;
   score: number | null;
   awarded_points: number;
-  source: "winners" | "submissions";
+  source: "winners" | "submissions" | "participants";
 };
 
 function mapOverviewRow(row: Record<string, unknown>): ChallengeOverviewRow {
@@ -141,75 +141,28 @@ export const challengeRepository = {
   },
 
   async listLeaderboard(challengeId: string): Promise<ChallengeLeaderboardRow[]> {
-    const { data: winners, error: winnersError } = await supabase
-      .from("challenge_winners")
+    const { data, error } = await supabase
+      .from("challenge_live_leaderboard")
       .select(
-        "profile_id, position, awarded_points, profiles:profile_id(username, full_name, avatar_url)",
+        "challenge_id, profile_id, username, full_name, avatar_url, position, score, awarded_points, source",
       )
       .eq("challenge_id", challengeId)
-      .order("position", { ascending: true });
-    if (winnersError) throw winnersError;
+      .order("position", { ascending: true })
+      .limit(200);
 
-    if (winners && winners.length > 0) {
-      return winners.map((row) => {
-        const profile = Array.isArray((row as Record<string, unknown>).profiles)
-          ? ((row as Record<string, unknown>).profiles as Record<string, unknown>[])[0]
-          : ((row as Record<string, unknown>).profiles as Record<string, unknown> | null);
-        return {
-          profile_id: (row.profile_id as string | null) ?? "",
-          username: (profile?.username as string | null) ?? null,
-          full_name: (profile?.full_name as string | null) ?? null,
-          avatar_url: (profile?.avatar_url as string | null) ?? null,
-          position: (row.position as number | null) ?? null,
-          score: null,
-          awarded_points: (row.awarded_points as number | null) ?? 0,
-          source: "winners",
-        };
-      });
-    }
+    if (error) throw error;
 
-    const { data: submissions, error: submissionsError } = await supabase
-      .from("challenge_submissions")
-      .select(
-        "profile_id, rank, score, profiles:profile_id(username, full_name, avatar_url)",
-      )
-      .eq("challenge_id", challengeId)
-      .in("status", ["submitted", "reviewed", "winner"])
-      .order("rank", { ascending: true, nullsFirst: false })
-      .order("score", { ascending: false, nullsFirst: false })
-      .limit(100);
-
-    if (submissionsError) throw submissionsError;
-
-    const scoredRows = (submissions ?? []).map((row, idx) => {
-      const profile = Array.isArray((row as Record<string, unknown>).profiles)
-        ? ((row as Record<string, unknown>).profiles as Record<string, unknown>[])[0]
-        : ((row as Record<string, unknown>).profiles as Record<string, unknown> | null);
-      const position = (row.rank as number | null) ?? idx + 1;
-      return {
-        profile_id: (row.profile_id as string | null) ?? "",
-        username: (profile?.username as string | null) ?? null,
-        full_name: (profile?.full_name as string | null) ?? null,
-        avatar_url: (profile?.avatar_url as string | null) ?? null,
-        position,
-        score: (row.score as number | null) ?? null,
-        awarded_points: position === 1 ? 30 : 10,
-        source: "submissions",
-      };
-    });
-
-    if (scoredRows.length > 0) return scoredRows;
-
-    const participants = await this.listParticipants(challengeId);
-    return participants.map((row, idx) => ({
-      profile_id: row.profile_id,
-      username: row.username,
-      full_name: row.full_name,
-      avatar_url: row.avatar_url,
-      position: idx + 1,
-      score: null,
-      awarded_points: idx === 0 ? 30 : 10,
-      source: "submissions" as const,
+    return (data ?? []).map((row) => ({
+      profile_id: (row.profile_id as string | null) ?? "",
+      username: (row.username as string | null) ?? null,
+      full_name: (row.full_name as string | null) ?? null,
+      avatar_url: (row.avatar_url as string | null) ?? null,
+      position: (row.position as number | null) ?? null,
+      score: (row.score as number | null) ?? null,
+      awarded_points: (row.awarded_points as number | null) ?? 0,
+      source:
+        ((row.source as ChallengeLeaderboardRow["source"] | null) ??
+          "participants"),
     }));
   },
 

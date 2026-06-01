@@ -27,6 +27,9 @@ app.use("/api/sync", syncRoutes);
 const auth2faRoutes = require("./routes/auth2fa");
 app.use("/api/auth/2fa", auth2faRoutes);
 
+const evaluationRoutes = require("./routes/evaluation");
+app.use("/api/evaluation", evaluationRoutes);
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

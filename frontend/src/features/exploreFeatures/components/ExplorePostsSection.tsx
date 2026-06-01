@@ -15,10 +15,15 @@ type ExplorePostsSectionProps = {
   commentDraft: string;
   commentMutationPending: boolean;
   commentMutationPostId?: string;
+  currentUserId: string | null;
+  deletingCommentId?: string;
+  deletingPostId?: string;
   onToggleLike: (postId: string) => void;
   onToggleComments: (postId: string) => void;
   onChangeCommentDraft: (value: string) => void;
   onSubmitComment: (postId: string) => void;
+  onDeleteComment: (postId: string, commentId: string) => void;
+  onDeletePost: (postId: string) => void;
   onOpenMediaLightbox: (postId: string) => void;
   loadMoreSentinelRef: RefObject<HTMLDivElement | null>;
   isFetchingNextPage: boolean;
@@ -34,10 +39,15 @@ export function ExplorePostsSection({
   commentDraft,
   commentMutationPending,
   commentMutationPostId,
+  currentUserId,
+  deletingCommentId,
+  deletingPostId,
   onToggleLike,
   onToggleComments,
   onChangeCommentDraft,
   onSubmitComment,
+  onDeleteComment,
+  onDeletePost,
   onOpenMediaLightbox,
   loadMoreSentinelRef,
   isFetchingNextPage,
@@ -73,10 +83,15 @@ export function ExplorePostsSection({
               commentSubmitting={
                 commentMutationPending && commentMutationPostId === post.id
               }
+              currentUserId={currentUserId}
+              deletingCommentId={deletingCommentId}
+              deletingPost={deletingPostId === post.id}
               onToggleLike={() => onToggleLike(post.id)}
               onToggleComments={() => onToggleComments(post.id)}
               onChangeCommentDraft={onChangeCommentDraft}
               onSubmitComment={() => onSubmitComment(post.id)}
+              onDeleteComment={(commentId) => onDeleteComment(post.id, commentId)}
+              onDeletePost={() => onDeletePost(post.id)}
               onOpenMediaLightbox={() => onOpenMediaLightbox(post.id)}
             />
           ))}

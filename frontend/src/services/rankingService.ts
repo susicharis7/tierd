@@ -18,6 +18,7 @@ export type LeaderboardEntry = {
   delta: number;
   tier: string;
   tierCode: string | null;
+  hasCompletedEvaluation: boolean;
   streakWeeks: number;
   percentile: number;
 };
@@ -48,6 +49,8 @@ export type ProfileProgress = {
   postsCount: number;
   postsLast30d: number;
   challengeWinsCount: number;
+  hasCompletedEvaluation: boolean;
+  evaluationCompletedAt: string | null;
 };
 
 export type EvaluationResult = {
@@ -93,6 +96,7 @@ function toLeaderboardEntry(row: LeaderboardRow): LeaderboardEntry {
     delta: row.delta,
     tier: row.tier_name ?? row.tier_code ?? "Unranked",
     tierCode: row.tier_code,
+    hasCompletedEvaluation: row.has_completed_evaluation ?? false,
     streakWeeks: row.streak_weeks,
     percentile: row.percentile,
   };
@@ -165,6 +169,8 @@ export const rankingService = {
       postsCount: metrics.posts_count,
       postsLast30d: metrics.posts_last_30d,
       challengeWinsCount: metrics.challenge_wins_count,
+      hasCompletedEvaluation: metrics.has_completed_evaluation ?? false,
+      evaluationCompletedAt: metrics.evaluation_completed_at ?? null,
     };
   },
 

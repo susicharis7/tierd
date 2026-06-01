@@ -7,6 +7,8 @@ import {
   useExploreCommentsQuery,
   useExploreLikeMutation,
   useExploreAddCommentMutation,
+  useExploreDeleteCommentMutation,
+  useExploreDeletePostMutation,
   useExploreCreatePostMutation,
 } from "../useExplorePageData";
 import { getExploreActionableMessage } from "../exploreErrors";
@@ -46,6 +48,8 @@ export function useExplorePageController() {
 
   const likeMutation = useExploreLikeMutation(userId);
   const commentMutation = useExploreAddCommentMutation(userId, currentProfile);
+  const deleteCommentMutation = useExploreDeleteCommentMutation(userId);
+  const deletePostMutation = useExploreDeletePostMutation(userId);
   const createPostMutation = useExploreCreatePostMutation(userId);
 
   const profiles = profilesQuery.data ?? [];
@@ -119,6 +123,31 @@ export function useExplorePageController() {
     );
   };
 
+  const handleDeleteComment = (postId: string, commentId: string) => {
+    if (!userId) {
+      toast("Log in to manage comments.");
+      return;
+    }
+
+    deleteCommentMutation.mutate({ postId, commentId });
+  };
+
+  const handleDeletePost = (postId: string) => {
+    if (!userId) {
+      toast("Log in to manage posts.");
+      return;
+    }
+    if (openCommentsPostId === postId) {
+      setOpenCommentsPostId(null);
+      setCommentDraft("");
+    }
+    if (lightboxPostId === postId) {
+      setLightboxPostId(null);
+      setCommentDraft("");
+    }
+    deletePostMutation.mutate({ postId });
+  };
+
   const handleComposerImageSelect = (file: File) => {
     setComposerImageFile(file);
     const url = URL.createObjectURL(file);
@@ -176,6 +205,8 @@ export function useExplorePageController() {
     loadMoreSentinelRef,
     isFetchingNextPage,
     commentMutation,
+    deleteCommentMutation,
+    deletePostMutation,
     createPostMutation,
     composerContent,
     setComposerContent,
@@ -187,6 +218,8 @@ export function useExplorePageController() {
     handleToggleLike,
     handleToggleComments,
     handleSubmitComment,
+    handleDeleteComment,
+    handleDeletePost,
     setLightboxPostId,
   };
 }

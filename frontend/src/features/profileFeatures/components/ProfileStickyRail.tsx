@@ -13,6 +13,7 @@ interface ProfileStickyRailProps {
   progressPct: number;
   weeklyScore: number;
   globalPercentile: number;
+  hasCompletedEvaluation: boolean;
   topTech: string[];
   onEditTech?: () => void;
   isOwnProfile: boolean;
@@ -30,6 +31,7 @@ const ProfileStickyRail = ({
   progressPct,
   weeklyScore,
   globalPercentile,
+  hasCompletedEvaluation,
   topTech,
   onEditTech,
   isOwnProfile,
@@ -48,6 +50,7 @@ const ProfileStickyRail = ({
         progressPct={progressPct}
         weeklyScore={weeklyScore}
         globalPercentile={globalPercentile}
+        hasCompletedEvaluation={hasCompletedEvaluation}
       />
       <GithubActivityPanel profileId={profileId} isOwnProfile={isOwnProfile} isLinked={isGithubLinked} compact />
       <TechStackCard topTech={topTech} onEditTech={onEditTech} isOwnProfile={isOwnProfile} githubLanguages={githubLanguages} />
@@ -65,6 +68,7 @@ interface TierCardProps {
   progressPct: number;
   weeklyScore: number;
   globalPercentile: number;
+  hasCompletedEvaluation: boolean;
 }
 
 const TierCard = ({
@@ -76,11 +80,13 @@ const TierCard = ({
   progressPct,
   weeklyScore,
   globalPercentile,
+  hasCompletedEvaluation,
 }: TierCardProps) => {
   const code = mapTierToBadge(tierCode);
   const nextTotal = currentScore + pointsToNextTier;
   const percentileLabel = `TOP ${Math.max(1, Math.round(globalPercentile))}%`;
   const weeklyLabel = weeklyScore === 0 ? "0" : `${weeklyScore > 0 ? "+" : ""}${weeklyScore}`;
+  const showEvaluationHint = !hasCompletedEvaluation && code === "UNRANKED";
 
   return (
     <div className="relative overflow-hidden rounded-[22px] bg-orange text-cream p-6 shadow-glow-orange" style={{ transform: "rotate(-0.8deg)" }}>
@@ -129,6 +135,13 @@ const TierCard = ({
           <MonoCaption tone="cream" className="!text-cream/70">PERCENTILE</MonoCaption>
         </div>
       </div>
+      {showEvaluationHint && (
+        <div className="mt-4 rounded-[10px] border border-cream/35 bg-ink/25 px-3 py-2">
+          <p className="font-mono-jb text-[10px] uppercase tracking-[0.1em] text-cream">
+            run Start Evaluation to unlock ranked tiers
+          </p>
+        </div>
+      )}
     </div>
   );
 };

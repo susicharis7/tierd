@@ -14,6 +14,7 @@ export type LeaderboardRow = {
   percentile: number;
   tier_code: string | null;
   tier_name: string | null;
+  has_completed_evaluation: boolean;
 };
 
 export type ProfilePublicMetricsRow = {
@@ -45,6 +46,8 @@ export type ProfilePublicMetricsRow = {
   challenge_wins_count: number;
   challenge_submissions_count: number;
   joined_challenges_count: number;
+  has_completed_evaluation: boolean;
+  evaluation_completed_at: string | null;
 };
 
 export type ChallengeStatsRow = {
@@ -61,7 +64,7 @@ export const rankingRepository = {
     const { data, error } = await supabase
       .from("live_global_leaderboard")
       .select(
-        "rank, profile_id, username, full_name, avatar_url, score, delta, streak_weeks, best_streak_weeks, peak_rank_global, percentile, tier_code, tier_name",
+        "rank, profile_id, username, full_name, avatar_url, score, delta, streak_weeks, best_streak_weeks, peak_rank_global, percentile, tier_code, tier_name, has_completed_evaluation",
       )
       .order("rank", { ascending: true })
       .limit(limit);
@@ -81,6 +84,8 @@ export const rankingRepository = {
       percentile: (row.percentile as number | null) ?? 0,
       tier_code: (row.tier_code as string | null) ?? null,
       tier_name: (row.tier_name as string | null) ?? null,
+      has_completed_evaluation:
+        (row.has_completed_evaluation as boolean | null) ?? false,
     }));
   },
 
@@ -88,7 +93,7 @@ export const rankingRepository = {
     const { data, error } = await supabase
       .from("landing_top_builders")
       .select(
-        "rank, profile_id, username, full_name, avatar_url, score, delta, streak_weeks, percentile, tier_code, tier_name",
+        "rank, profile_id, username, full_name, avatar_url, score, delta, streak_weeks, percentile, tier_code, tier_name, has_completed_evaluation",
       )
       .order("rank", { ascending: true })
       .limit(limit);
@@ -108,6 +113,8 @@ export const rankingRepository = {
       percentile: (row.percentile as number | null) ?? 0,
       tier_code: (row.tier_code as string | null) ?? null,
       tier_name: (row.tier_name as string | null) ?? null,
+      has_completed_evaluation:
+        (row.has_completed_evaluation as boolean | null) ?? false,
     }));
   },
 
@@ -115,7 +122,7 @@ export const rankingRepository = {
     const { data, error } = await supabase
       .from("live_global_leaderboard")
       .select(
-        "rank, profile_id, username, full_name, avatar_url, score, delta, streak_weeks, best_streak_weeks, peak_rank_global, percentile, tier_code, tier_name",
+        "rank, profile_id, username, full_name, avatar_url, score, delta, streak_weeks, best_streak_weeks, peak_rank_global, percentile, tier_code, tier_name, has_completed_evaluation",
       )
       .order("delta", { ascending: false })
       .limit(limit);
@@ -135,6 +142,8 @@ export const rankingRepository = {
       percentile: (row.percentile as number | null) ?? 0,
       tier_code: (row.tier_code as string | null) ?? null,
       tier_name: (row.tier_name as string | null) ?? null,
+      has_completed_evaluation:
+        (row.has_completed_evaluation as boolean | null) ?? false,
     }));
   },
 
@@ -144,7 +153,7 @@ export const rankingRepository = {
     const { data, error } = await supabase
       .from("profile_public_metrics")
       .select(
-        "profile_id, username, full_name, avatar_url, country_code, total_score, weekly_score, streak_weeks, best_streak_weeks, peak_rank_global, global_rank, global_percentile, country_rank, country_percentile, tier_code, tier_name, tier_min_score, next_tier_code, next_tier_name, next_tier_min_score, points_to_next_tier, posts_count, posts_last_30d, followers_count, following_count, challenge_wins_count, challenge_submissions_count, joined_challenges_count",
+        "profile_id, username, full_name, avatar_url, country_code, total_score, weekly_score, streak_weeks, best_streak_weeks, peak_rank_global, global_rank, global_percentile, country_rank, country_percentile, tier_code, tier_name, tier_min_score, next_tier_code, next_tier_name, next_tier_min_score, points_to_next_tier, posts_count, posts_last_30d, followers_count, following_count, challenge_wins_count, challenge_submissions_count, joined_challenges_count, has_completed_evaluation, evaluation_completed_at",
       )
       .eq("profile_id", profileId)
       .maybeSingle();
@@ -183,6 +192,10 @@ export const rankingRepository = {
         (data.challenge_submissions_count as number | null) ?? 0,
       joined_challenges_count:
         (data.joined_challenges_count as number | null) ?? 0,
+      has_completed_evaluation:
+        (data.has_completed_evaluation as boolean | null) ?? false,
+      evaluation_completed_at:
+        (data.evaluation_completed_at as string | null) ?? null,
     };
   },
 

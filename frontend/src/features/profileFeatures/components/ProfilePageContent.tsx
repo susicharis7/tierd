@@ -14,6 +14,8 @@ import { ExplorePostCard } from "../../exploreFeatures/ExplorePostCard";
 import {
   useExploreAddCommentMutation,
   useExploreCommentsQuery,
+  useExploreDeleteCommentMutation,
+  useExploreDeletePostMutation,
   useExploreLikeMutation,
   useProfileByUsernameQuery,
   useUserPostsInfiniteQuery,
@@ -126,6 +128,8 @@ const ProfilePageContent = () => {
 
   const likeMutation = useExploreLikeMutation(authUserId);
   const commentMutation = useExploreAddCommentMutation(authUserId, authProfile);
+  const deleteCommentMutation = useExploreDeleteCommentMutation(authUserId);
+  const deletePostMutation = useExploreDeletePostMutation(authUserId);
 
   const commentsForActivePost = commentsFetchPostId
     ? (commentsQuery.data ?? [])
@@ -175,6 +179,30 @@ const ProfilePageContent = () => {
     );
   };
 
+  const handleDeleteComment = (postId: string, commentId: string) => {
+    if (!authUserId) {
+      toast("Log in to manage comments.");
+      return;
+    }
+    deleteCommentMutation.mutate({ postId, commentId });
+  };
+
+  const handleDeletePost = (postId: string) => {
+    if (!authUserId) {
+      toast("Log in to manage posts.");
+      return;
+    }
+    if (openCommentsPostId === postId) {
+      setOpenCommentsPostId(null);
+      setCommentDraft("");
+    }
+    if (lightboxPostId === postId) {
+      setLightboxPostId(null);
+      setCommentDraft("");
+    }
+    deletePostMutation.mutate({ postId });
+  };
+
   /* UI toggles */
   const [editOpen, setEditOpen] = useState(false);
   const [authGateOpen, setAuthGateOpen] = useState(false);
@@ -213,6 +241,7 @@ const ProfilePageContent = () => {
   const followingCount = profileProgress?.followingCount ?? 0;
   const weeklyScore = profileProgress?.weeklyScore ?? 0;
   const globalPercentile = profileProgress?.globalPercentile ?? 100;
+  const hasCompletedEvaluation = profileProgress?.hasCompletedEvaluation ?? false;
 
   // Read directly from the Supabase session instead of a second
   // useLinkedProviders fetch — LinkedProvidersSection already owns that
@@ -361,10 +390,15 @@ const ProfilePageContent = () => {
                   commentDraft={commentDraft}
                   commentMutationPending={commentMutation.isPending}
                   commentMutationPostId={commentMutation.variables?.postId}
+                  currentUserId={authUserId}
+                  deletingCommentId={deleteCommentMutation.variables?.commentId}
+                  deletingPostId={deletePostMutation.variables?.postId}
                   onToggleLike={handleToggleLike}
                   onToggleComments={handleToggleComments}
                   onChangeCommentDraft={setCommentDraft}
                   onSubmitComment={handleSubmitComment}
+                  onDeleteComment={handleDeleteComment}
+                  onDeletePost={handleDeletePost}
                   onOpenMediaLightbox={handleOpenMediaLightbox}
                   hasNextPage={Boolean(userPostsQuery.hasNextPage)}
                   isFetchingNextPage={userPostsQuery.isFetchingNextPage}
@@ -386,6 +420,7 @@ const ProfilePageContent = () => {
                 progressPct={progressToNext}
                 weeklyScore={weeklyScore}
                 globalPercentile={globalPercentile}
+                hasCompletedEvaluation={hasCompletedEvaluation}
                 topTech={topTech}
                 onEditTech={() => setTechOpen(true)}
                 isOwnProfile={isOwnProfile}
@@ -416,6 +451,13 @@ const ProfilePageContent = () => {
             commentMutation.isPending &&
             commentMutation.variables?.postId === lightboxPost.id
           }
+          currentUserId={authUserId}
+          deletingCommentId={deleteCommentMutation.variables?.commentId}
+          deletingPost={deletePostMutation.variables?.postId === lightboxPost.id}
+          onDeleteComment={(commentId) =>
+            handleDeleteComment(lightboxPost.id, commentId)
+          }
+          onDeletePost={() => handleDeletePost(lightboxPost.id)}
           onToggleLike={() => handleToggleLike(lightboxPost.id)}
         />
       )}
@@ -495,10 +537,15 @@ interface PostsListProps {
   commentDraft: string;
   commentMutationPending: boolean;
   commentMutationPostId?: string;
+  currentUserId: string | null;
+  deletingCommentId?: string;
+  deletingPostId?: string;
   onToggleLike: (postId: string) => void;
   onToggleComments: (postId: string) => void;
   onChangeCommentDraft: (v: string) => void;
   onSubmitComment: (postId: string) => void;
+  onDeleteComment: (postId: string, commentId: string) => void;
+  onDeletePost: (postId: string) => void;
   onOpenMediaLightbox: (postId: string) => void;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
@@ -516,10 +563,15 @@ const PostsList = ({
   commentDraft,
   commentMutationPending,
   commentMutationPostId,
+  currentUserId,
+  deletingCommentId,
+  deletingPostId,
   onToggleLike,
   onToggleComments,
   onChangeCommentDraft,
   onSubmitComment,
+  onDeleteComment,
+  onDeletePost,
   onOpenMediaLightbox,
   hasNextPage,
   isFetchingNextPage,
@@ -575,10 +627,15 @@ const PostsList = ({
             commentSubmitting={
               commentMutationPending && commentMutationPostId === post.id
             }
+            currentUserId={currentUserId}
+            deletingCommentId={deletingCommentId}
+            deletingPost={deletingPostId === post.id}
             onToggleLike={() => onToggleLike(post.id)}
             onToggleComments={() => onToggleComments(post.id)}
             onChangeCommentDraft={onChangeCommentDraft}
             onSubmitComment={() => onSubmitComment(post.id)}
+            onDeleteComment={(commentId) => onDeleteComment(post.id, commentId)}
+            onDeletePost={() => onDeletePost(post.id)}
             onOpenMediaLightbox={() => onOpenMediaLightbox(post.id)}
           />
         ))}

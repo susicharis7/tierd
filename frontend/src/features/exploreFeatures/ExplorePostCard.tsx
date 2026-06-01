@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Heart, MessageSquare, Image as ImageIcon } from "lucide-react";
+import { Heart, MessageSquare, Image as ImageIcon, Trash2 } from "lucide-react";
 
 import { Doodle, UserAvatar } from "../../components/tierd";
 import { Textarea } from "../../components/ui/textarea";
@@ -21,10 +21,15 @@ export function ExplorePostCard({
   commentsLoading,
   commentDraft,
   commentSubmitting,
+  currentUserId,
+  deletingCommentId,
+  deletingPost,
   onToggleLike,
   onToggleComments,
   onChangeCommentDraft,
   onSubmitComment,
+  onDeleteComment,
+  onDeletePost,
   onOpenMediaLightbox,
 }: {
   post: FeedPost;
@@ -34,10 +39,15 @@ export function ExplorePostCard({
   commentsLoading: boolean;
   commentDraft: string;
   commentSubmitting: boolean;
+  currentUserId: string | null;
+  deletingCommentId?: string;
+  deletingPost?: boolean;
   onToggleLike: () => void;
   onToggleComments: () => void;
   onChangeCommentDraft: (v: string) => void;
   onSubmitComment: () => void;
+  onDeleteComment: (commentId: string) => void;
+  onDeletePost: () => void;
   onOpenMediaLightbox: () => void;
 }) {
   const liked = !!post.liked_by_me;
@@ -50,6 +60,7 @@ export function ExplorePostCard({
 
   const authorName = authorDisplayName(post.author);
   const profilePath = `/profile/${post.author.username ?? post.author.id}`;
+  const canDeletePost = Boolean(currentUserId && post.author.id === currentUserId);
 
   return (
     <motion.article
@@ -104,6 +115,18 @@ export function ExplorePostCard({
               <span className="font-mono-jb text-[11px] text-muted-ink shrink-0">
                 {timeAgo(post.created_at)}
               </span>
+              {canDeletePost && (
+                <button
+                  type="button"
+                  onClick={onDeletePost}
+                  disabled={deletingPost}
+                  className="ml-auto inline-flex items-center gap-1 rounded-full border border-cream/20 px-2 py-1 text-[10px] font-mono-jb text-cream/75 hover:border-orange hover:text-orange disabled:opacity-50"
+                  aria-label="Delete post"
+                >
+                  <Trash2 size={10} />
+                  {deletingPost ? "..." : "delete post"}
+                </button>
+              )}
             </div>
 
             <div className="mb-3">
@@ -193,7 +216,13 @@ export function ExplorePostCard({
                     </p>
                   ) : (
                     comments.map((c) => (
-                      <CommentRow key={c.id} comment={c} />
+                      <CommentRow
+                        key={c.id}
+                        comment={c}
+                        canDelete={Boolean(currentUserId && c.author.id === currentUserId)}
+                        deleting={deletingCommentId === c.id}
+                        onDelete={() => onDeleteComment(c.id)}
+                      />
                     ))
                   )}
                 </div>
@@ -232,7 +261,17 @@ export function ExplorePostCard({
   );
 }
 
-function CommentRow({ comment: c }: { comment: PostComment }) {
+function CommentRow({
+  comment: c,
+  canDelete,
+  deleting,
+  onDelete,
+}: {
+  comment: PostComment;
+  canDelete: boolean;
+  deleting: boolean;
+  onDelete: () => void;
+}) {
   const name = c.author.full_name?.trim() || c.author.username || "Anonymous";
   return (
     <div className="flex items-start gap-2.5">
@@ -251,6 +290,18 @@ function CommentRow({ comment: c }: { comment: PostComment }) {
           <p className="font-mono-jb text-[10px] text-muted-ink">
             {timeAgo(c.created_at)}
           </p>
+          {canDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={deleting}
+              className="ml-auto inline-flex items-center gap-1 rounded-full border border-cream/20 px-2 py-1 text-[10px] font-mono-jb text-cream/75 hover:border-orange hover:text-orange disabled:opacity-50"
+              aria-label="Delete comment"
+            >
+              <Trash2 size={10} />
+              {deleting ? "..." : "delete"}
+            </button>
+          )}
         </div>
         <p className="mt-1 font-grot text-[14px] leading-[1.5] text-cream/80 whitespace-pre-line">
           {c.content}

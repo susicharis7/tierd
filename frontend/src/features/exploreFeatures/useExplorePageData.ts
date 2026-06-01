@@ -11,6 +11,8 @@ import type { ProfileRow } from "../authFeatures/authTypes";
 import {
   addPostComment,
   createPost,
+  deletePost,
+  deletePostComment,
   fetchExploreFeedWithLikes,
   fetchPostComments,
   fetchProfileByUsername,
@@ -23,6 +25,7 @@ import {
   isUserPostsQueryKey,
   patchCommentCountInInfinitePosts,
   patchLikeInInfinitePosts,
+  patchRemovePostInInfinitePosts,
   type PostsInfiniteData,
 } from "./exploreQueryCachePatches";
 import { getExploreActionableMessage } from "./exploreErrors";
@@ -185,6 +188,33 @@ type CommentCtx = {
   postId: string;
 };
 
+type DeleteCommentVars = {
+  postId: string;
+  commentId: string;
+};
+
+type DeleteCommentCtx = {
+  prevComments: PostComment[] | undefined;
+  prevFeed: ExploreFeedInfiniteData | undefined;
+  prevUserPosts: Array<{
+    queryKey: readonly unknown[];
+    data: UserPostsInfiniteData | undefined;
+  }>;
+  removed: PostComment | null;
+};
+
+type DeletePostVars = {
+  postId: string;
+};
+
+type DeletePostCtx = {
+  prevFeed: ExploreFeedInfiniteData | undefined;
+  prevUserPosts: Array<{
+    queryKey: readonly unknown[];
+    data: UserPostsInfiniteData | undefined;
+  }>;
+};
+
 export function useExploreAddCommentMutation(
   userId: string | null,
   profile: ProfileRow | null,
@@ -292,6 +322,157 @@ export function useExploreAddCommentMutation(
       }
       void queryClient.invalidateQueries({
         predicate: (q) => isUserPostsQueryKey(q.queryKey),
+      });
+      void invalidateRankingQueries(queryClient);
+    },
+  });
+}
+
+export function useExploreDeleteCommentMutation(userId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, DeleteCommentVars, DeleteCommentCtx | undefined>({
+    mutationFn: async ({ postId, commentId }: DeleteCommentVars) => {
+      if (!userId) throw new Error("Not signed in");
+      await deletePostComment({ userId, postId, commentId });
+    },
+    onMutate: async ({ postId, commentId }) => {
+      if (!userId) return undefined;
+
+      await queryClient.cancelQueries({ queryKey: exploreKeys.comments(postId) });
+      await queryClient.cancelQueries({ queryKey: exploreKeys.feed(userId) });
+      await queryClient.cancelQueries({
+        predicate: (q) => isUserPostsQueryKey(q.queryKey),
+      });
+
+      const prevComments = queryClient.getQueryData<PostComment[]>(
+        exploreKeys.comments(postId),
+      );
+      const prevFeed = queryClient.getQueryData<ExploreFeedInfiniteData>(
+        exploreKeys.feed(userId),
+      );
+      const prevUserPosts = queryClient
+        .getQueryCache()
+        .findAll({ predicate: (q) => isUserPostsQueryKey(q.queryKey) })
+        .map((q) => ({
+          queryKey: q.queryKey as readonly unknown[],
+          data: queryClient.getQueryData<UserPostsInfiniteData>(q.queryKey),
+        }));
+
+      const removed = (prevComments ?? []).find((c) => c.id === commentId) ?? null;
+      const shouldDecrement = Boolean(removed);
+
+      queryClient.setQueryData<PostComment[]>(
+        exploreKeys.comments(postId),
+        (old) => (old ?? []).filter((c) => c.id !== commentId),
+      );
+
+      if (shouldDecrement) {
+        queryClient.setQueryData<ExploreFeedInfiniteData>(
+          exploreKeys.feed(userId),
+          (old) => patchCommentCountInInfinitePosts(old, postId, -1),
+        );
+        queryClient.setQueriesData<UserPostsInfiniteData>(
+          { predicate: (q) => isUserPostsQueryKey(q.queryKey) },
+          (old) => patchCommentCountInInfinitePosts(old, postId, -1),
+        );
+      }
+
+      return { prevComments, prevFeed, prevUserPosts, removed };
+    },
+    onError: (err, vars, ctx) => {
+      if (!ctx) return;
+
+      if (ctx.prevComments !== undefined) {
+        queryClient.setQueryData(exploreKeys.comments(vars.postId), ctx.prevComments);
+      }
+      if (userId && ctx.prevFeed !== undefined) {
+        queryClient.setQueryData(exploreKeys.feed(userId), ctx.prevFeed);
+      }
+      if (ctx.prevUserPosts) {
+        for (const { queryKey, data } of ctx.prevUserPosts) {
+          queryClient.setQueryData(queryKey, data);
+        }
+      }
+
+      const msg = err instanceof Error ? err.message : "Failed to delete comment.";
+      toast(getExploreActionableMessage(err) ?? msg);
+    },
+    onSettled: (_data, _err, vars) => {
+      void queryClient.invalidateQueries({
+        queryKey: exploreKeys.comments(vars.postId),
+      });
+      if (userId) {
+        void queryClient.invalidateQueries({
+          queryKey: exploreKeys.feed(userId),
+        });
+      }
+      void queryClient.invalidateQueries({
+        predicate: (q) => isUserPostsQueryKey(q.queryKey),
+      });
+      void invalidateRankingQueries(queryClient);
+    },
+  });
+}
+
+export function useExploreDeletePostMutation(userId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, DeletePostVars, DeletePostCtx | undefined>({
+    mutationFn: async ({ postId }: DeletePostVars) => {
+      if (!userId) throw new Error("Not signed in");
+      await deletePost({ userId, postId });
+    },
+    onMutate: async ({ postId }) => {
+      if (!userId) return undefined;
+
+      await queryClient.cancelQueries({ queryKey: exploreKeys.feed(userId) });
+      await queryClient.cancelQueries({
+        predicate: (q) => isUserPostsQueryKey(q.queryKey),
+      });
+
+      const prevFeed = queryClient.getQueryData<ExploreFeedInfiniteData>(
+        exploreKeys.feed(userId),
+      );
+      const prevUserPosts = queryClient
+        .getQueryCache()
+        .findAll({ predicate: (q) => isUserPostsQueryKey(q.queryKey) })
+        .map((q) => ({
+          queryKey: q.queryKey as readonly unknown[],
+          data: queryClient.getQueryData<UserPostsInfiniteData>(q.queryKey),
+        }));
+
+      queryClient.setQueryData<ExploreFeedInfiniteData>(
+        exploreKeys.feed(userId),
+        (old) => patchRemovePostInInfinitePosts(old, postId),
+      );
+      queryClient.setQueriesData<UserPostsInfiniteData>(
+        { predicate: (q) => isUserPostsQueryKey(q.queryKey) },
+        (old) => patchRemovePostInInfinitePosts(old, postId),
+      );
+
+      return { prevFeed, prevUserPosts };
+    },
+    onError: (err, _vars, ctx) => {
+      if (!ctx) return;
+      if (userId && ctx.prevFeed !== undefined) {
+        queryClient.setQueryData(exploreKeys.feed(userId), ctx.prevFeed);
+      }
+      for (const { queryKey, data } of ctx.prevUserPosts) {
+        queryClient.setQueryData(queryKey, data);
+      }
+      const msg = err instanceof Error ? err.message : "Failed to delete post.";
+      toast(getExploreActionableMessage(err) ?? msg);
+    },
+    onSettled: (_data, _err, vars) => {
+      if (userId) {
+        void queryClient.invalidateQueries({ queryKey: exploreKeys.feed(userId) });
+      }
+      void queryClient.invalidateQueries({
+        predicate: (q) => isUserPostsQueryKey(q.queryKey),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: exploreKeys.comments(vars.postId),
       });
       void invalidateRankingQueries(queryClient);
     },

@@ -56,6 +56,19 @@ npm run dev:frontend   # http://localhost:5173
 npm run dev:backend    # http://localhost:5000
 ```
 
+## Tests
+
+- Backend tests are implemented with `Jest` + `Supertest`.
+- Main API tests are in `backend/__tests__/`:
+  - `health.routes.test.js`
+  - `auth2fa.routes.test.js`
+  - `evaluation.routes.test.js`
+- Run tests:
+
+```bash
+npm --prefix backend test
+```
+
 ## Environment
 
 - Frontend vars: `frontend/.env.example`

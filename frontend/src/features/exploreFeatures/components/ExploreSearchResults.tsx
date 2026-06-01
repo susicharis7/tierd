@@ -1,11 +1,11 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar";
+
+import { MonoCaption, UserAvatar } from "../../../components/tierd";
 import { timeAgo } from "../../../lib/utils";
 import {
   authorDisplayName,
   authorHandleStr,
-  authorInitial,
 } from "../exploreAuthorDisplay";
 import type { ExploreProfile } from "../exploreTypes";
 
@@ -20,17 +20,19 @@ export function ExploreSearchResults({
   searchQuery,
   searchResults,
 }: ExploreSearchResultsProps) {
+  const count = (searchResults ?? []).length;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="mx-auto mb-8 max-w-3xl"
     >
-      <p className="text-xs text-muted-foreground/50 mb-3">
+      <MonoCaption tone="muted" className="mb-3">
         {searchLoading
-          ? "Searching..."
-          : `${(searchResults ?? []).length} result${(searchResults ?? []).length !== 1 ? "s" : ""} for "${searchQuery}"`}
-      </p>
+          ? "searching…"
+          : `${count} result${count !== 1 ? "s" : ""} for "${searchQuery}"`}
+      </MonoCaption>
 
       {searchResults && searchResults.length > 0 ? (
         <div className="grid sm:grid-cols-2 gap-3">
@@ -43,22 +45,19 @@ export function ExploreSearchResults({
             >
               <Link
                 to={`/profile/${p.username ?? p.id}`}
-                className="flex items-center gap-3 rounded-xl border border-border/30 bg-muted/5 p-4 transition-all hover:border-ember/20 hover:bg-muted/10"
+                className="flex items-center gap-3 rounded-xl border border-dashed border-cream/15 bg-cream/[0.03] p-4 transition-colors hover:border-cream/30 hover:bg-cream/[0.06]"
               >
-                <Avatar className="h-10 w-10">
-                  {p.avatar_url && (
-                    <AvatarImage src={p.avatar_url} alt={authorDisplayName(p)} />
-                  )}
-                  <AvatarFallback className="bg-ember/10 text-ember font-display font-bold text-xs">
-                    {authorInitial(p)}
-                  </AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  name={authorDisplayName(p)}
+                  src={p.avatar_url}
+                  size={40}
+                />
                 <div className="min-w-0">
-                  <p className="font-display font-semibold text-sm text-foreground truncate">
+                  <p className="font-grot font-bold text-[14px] text-cream truncate">
                     {authorDisplayName(p)}
                   </p>
-                  <p className="text-xs text-muted-foreground/50 truncate">
-                    {authorHandleStr(p.username)} · Joined {timeAgo(p.created_at)}
+                  <p className="font-mono-jb text-[10px] uppercase tracking-[0.08em] text-muted-ink truncate">
+                    {authorHandleStr(p.username)} · joined {timeAgo(p.created_at)}
                   </p>
                 </div>
               </Link>
@@ -66,8 +65,8 @@ export function ExploreSearchResults({
           ))}
         </div>
       ) : searchResults && searchResults.length === 0 ? (
-        <div className="p-8 text-center rounded-xl border border-border/20 bg-muted/3">
-          <p className="text-sm text-muted-foreground/50">
+        <div className="p-8 text-center rounded-xl border border-dashed border-cream/15 bg-cream/[0.03]">
+          <p className="font-mono-jb text-[13px] text-muted-ink">
             No developers found for "{searchQuery}"
           </p>
         </div>
@@ -75,4 +74,3 @@ export function ExploreSearchResults({
     </motion.div>
   );
 }
-

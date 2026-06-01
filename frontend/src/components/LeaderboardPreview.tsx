@@ -1,133 +1,172 @@
-import { motion } from "framer-motion";
+﻿import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useState } from "react";
-import { TrendingUp, ArrowRight } from "lucide-react";
-import { useLandingTopBuildersQuery } from "../features/rankingFeatures/useRankingData";
 
-const tabs = ["Global", "AI", "Web", "Game Dev"];
+import {
+  Doodle,
+  MonoCaption,
+  StickerBadge,
+  TierBadge,
+  UserAvatar,
+} from "./tierd";
+import { cn } from "../lib/utils";
+import { useLandingTopBuildersQuery } from "../features/rankingFeatures/useRankingData";
+import { mapTierToBadge } from "../features/rankingFeatures/tierMapping";
+
+const tabs = ["Global", "AI", "Web", "Game Dev"] as const;
+const tabDot: Record<(typeof tabs)[number], string> = {
+  Global: "bg-orange",
+  AI: "bg-plum",
+  Web: "bg-forest",
+  "Game Dev": "bg-orange-2",
+};
 
 const LeaderboardPreview = () => {
-  const [activeTab, setActiveTab] = useState("Global");
+  const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("Global");
   const leaderboardQuery = useLandingTopBuildersQuery(8);
   const leaderboard = leaderboardQuery.data ?? [];
 
   return (
-    <section className="relative py-24 border-t border-border">
-      <div className="section-container">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4"
-        >
+    <section className="relative py-24">
+      <Doodle.Mountains
+        w={520}
+        h={180}
+        className="absolute top-10 right-0 text-orange/15 hidden lg:block pointer-events-none"
+        aria-hidden
+      />
+      <div className="section-container relative">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-5 mb-8">
           <div>
-            <h2 className="font-title font-bold text-2xl sm:text-3xl text-foreground mb-2">
-              Climb the leaderboard<span className="text-ember">.</span>
+            <StickerBadge
+              color="plum"
+              tilt={-2}
+              icon={<Doodle.Trophy size={11} />}
+              className="mb-4"
+            >
+              this week
+            </StickerBadge>
+            <h2 className="font-boldonse text-[44px] sm:text-[56px] leading-[0.95] text-cream">
+              climb the <span className="text-orange">leaderboard.</span>
             </h2>
-            <p className="text-muted-foreground text-sm">
-              A public score for private effort.
+            <p className="font-mono-jb text-[13px] text-muted-ink mt-3 max-w-[460px] leading-[1.6]">
+              A public score for private effort. Score weights real signals - code
+              quality, consistency, OSS impact - over follower count.
             </p>
           </div>
-          <Link to="/leaderboard" className="btn-ghost text-xs gap-1.5 w-fit">
-            View full leaderboard <ArrowRight size={14} />
+          <Link
+            to="/leaderboard"
+            className="self-start sm:self-end rounded-full border border-dashed border-cream/30 text-cream font-mono-jb text-[12px] font-bold px-5 py-2.5 hover:border-cream/50 transition-colors inline-flex items-center gap-2"
+          >
+            view full leaderboard {"->"}
           </Link>
-        </motion.div>
-
-        <div className="flex gap-1 mb-6 overflow-x-auto pb-2">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 text-xs font-medium rounded-md transition-all whitespace-nowrap ${
-                activeTab === tab
-                  ? "bg-ember/15 text-ember"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
-              }`}
-              style={
-                activeTab === tab
-                  ? { border: "1px solid hsl(var(--ember) / 0.2)" }
-                  : {}
-              }
-            >
-              {tab}
-            </button>
-          ))}
         </div>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          className="glass-surface overflow-hidden"
-        >
-          <div className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-x-4 px-5 py-3 border-b border-border text-xs text-muted-foreground font-medium">
-            <span>#</span>
-            <span>Developer</span>
-            <span className="hidden sm:block">Scope</span>
-            <span>Tier</span>
-            <span className="text-right">Score</span>
+        <div className="flex items-center gap-2 flex-wrap mb-7">
+          <MonoCaption tone="muted" className="mr-1.5">
+            FILTER:
+          </MonoCaption>
+          {tabs.map((tab) => {
+            const active = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 font-mono-jb text-[12px] font-semibold whitespace-nowrap transition-colors",
+                  active
+                    ? "bg-cream text-ink"
+                    : "bg-transparent text-cream border border-cream/15 hover:border-cream/30",
+                )}
+              >
+                <span className={cn("w-1.5 h-1.5 rounded-full", tabDot[tab])} />
+                {tab}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="rounded-[18px] bg-cream/[0.04] border border-cream/10 p-2">
+          <div className="hidden sm:grid grid-cols-[60px_1fr_120px_110px_120px] gap-x-4 items-center px-4 py-3 border-b border-dashed border-cream/10">
+            {["#", "Developer", "Scope", "Tier"].map((h) => (
+              <MonoCaption key={h} tone="muted">
+                {h}
+              </MonoCaption>
+            ))}
+            <MonoCaption tone="muted" className="justify-end">
+              Score
+            </MonoCaption>
           </div>
 
           {leaderboardQuery.isPending && (
-            <div className="px-5 py-8 text-sm text-muted-foreground">
+            <div className="px-5 py-10 font-mono-jb text-[13px] text-muted-ink">
               Loading leaderboard...
             </div>
           )}
 
-          {leaderboard.map((dev) => (
-            <div
-              key={`${dev.profileId}-${dev.rank}`}
-              className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-x-4 px-5 py-3 items-center hover:bg-muted/20 transition-colors border-b border-border/50 last:border-0"
-            >
-              <span
-                className={`font-display font-bold text-sm w-5 ${
-                  dev.rank <= 3 ? "text-ember" : "text-muted-foreground"
-                }`}
-              >
-                {dev.rank}
-              </span>
-              <div className="flex items-center gap-3 min-w-0">
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center font-display font-bold text-xs shrink-0 ${
-                    dev.rank <= 3 ? "bg-ember/20" : "bg-muted/40"
-                  }`}
-                >
-                  {(dev.fullName || dev.username || "U")
-                    .charAt(0)
-                    .toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {dev.fullName}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    @{dev.username}
-                  </p>
-                </div>
-              </div>
-              <span className="text-xs text-muted-foreground hidden sm:block">
-                {activeTab}
-              </span>
-              <span className="tier-badge text-[10px] py-0.5 px-2">
-                {dev.tier}
-              </span>
-              <div className="text-right">
-                <p className="text-sm font-display font-semibold text-foreground">
-                  {dev.score.toLocaleString()}
-                </p>
-                <p className="text-[10px] text-ember flex items-center justify-end gap-0.5">
-                  <TrendingUp size={9} />
-                  {dev.delta >= 0 ? "+" : ""}
-                  {dev.delta}
-                </p>
-              </div>
+          {!leaderboardQuery.isPending && leaderboard.length === 0 && (
+            <div className="px-5 py-10 font-mono-jb text-[13px] text-muted-ink">
+              No leaderboard data yet.
             </div>
-          ))}
-        </motion.div>
+          )}
+
+          {leaderboard.map((dev, i) => {
+            const tier = mapTierToBadge(dev.tierCode ?? dev.tier);
+            const isLast = i === leaderboard.length - 1;
+            const topThree = dev.rank <= 3;
+            return (
+              <div
+                key={`${dev.profileId}-${dev.rank}`}
+                className={cn(
+                  "grid grid-cols-[40px_1fr_auto] sm:grid-cols-[60px_1fr_120px_110px_120px] gap-x-4 items-center px-4 py-3.5 transition-colors hover:bg-cream/[0.03]",
+                  !isLast && "border-b border-dashed border-cream/[0.06]",
+                )}
+              >
+                <div
+                  className={cn(
+                    "font-boldonse text-[20px]",
+                    topThree ? "text-orange" : "text-cream/60",
+                  )}
+                >
+                  0{dev.rank}
+                </div>
+                <div className="flex items-center gap-3 min-w-0">
+                  <UserAvatar
+                    name={dev.fullName || dev.username || "U"}
+                    src={dev.avatarUrl}
+                    size={36}
+                  />
+                  <div className="min-w-0">
+                    <p className="font-grot font-bold text-[14px] text-cream truncate">
+                      {dev.fullName}
+                    </p>
+                    <p className="font-mono-jb text-[10px] uppercase tracking-[0.08em] text-muted-ink truncate">
+                      @{dev.username}
+                    </p>
+                  </div>
+                </div>
+                <span className="hidden sm:inline-flex items-center gap-1.5 font-mono-jb text-[12px] text-cream">
+                  <span className={cn("w-[5px] h-[5px] rounded-full", tabDot[activeTab])} />
+                  {activeTab}
+                </span>
+                <span className="hidden sm:block">
+                  <TierBadge tier={tier} size="sm" />
+                </span>
+                <div className="text-right">
+                  <div className="font-boldonse text-[16px] text-cream">
+                    {dev.score.toLocaleString()}
+                  </div>
+                  <div className="font-mono-jb text-[10px] font-bold text-forest">
+                    {dev.delta >= 0 ? "up +" : "down "}
+                    {dev.delta}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </section>
   );
 };
 
 export default LeaderboardPreview;
-

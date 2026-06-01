@@ -1,25 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import Navbar from "../../../components/Navbar";
+import { useNavigate, useParams } from "react-router-dom";
+
 import Footer from "../../../components/Footer";
-import {
-  MapPin, BadgeCheck, ExternalLink, Flame, Zap,
-  Github, Globe, Trophy, TrendingUp,
-  Camera, Pencil, Lock, Shield, Award, Sparkles, UserCheck, UserPlus,
-} from "lucide-react";
-import { ProfileMotif } from "../../../components/PageBackgroundMotif";
+import Navbar from "../../../components/Navbar";
 import AuthDialog from "../../../components/AuthDialog";
 import FeedImageLightbox from "../../../components/FeedImageLightbox";
-import { useAuth } from "../../authFeatures/AuthProvider";
-import { updateProfile, uploadAvatar } from "../../authFeatures/auth";
-import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "../../../components/ui/dialog";
-import { Input } from "../../../components/ui/input";
-import { Label } from "../../../components/ui/label";
+import { Doodle, MonoCaption } from "../../../components/tierd";
 import { toast } from "../../../components/ui/sonner";
+import { useAuth } from "../../authFeatures/AuthProvider";
 import { getExploreActionableMessage } from "../../exploreFeatures/exploreErrors";
 import { ExplorePostCard } from "../../exploreFeatures/ExplorePostCard";
 import {
@@ -29,220 +18,44 @@ import {
   useProfileByUsernameQuery,
   useUserPostsInfiniteQuery,
 } from "../../exploreFeatures/useExplorePageData";
+import type { FeedPost, PostComment } from "../../exploreFeatures/exploreTypes";
+import { useProfileProgressQuery } from "../../rankingFeatures/useRankingData";
 import {
-  useProfileEvaluationQuery,
-  useProfileProgressQuery,
-} from "../../rankingFeatures/useRankingData";
-import {
+  useFollowStateQuery,
   useFollowersListQuery,
   useFollowingListQuery,
-  useFollowStateQuery,
   useToggleFollowMutation,
 } from "../useProfileSocialData";
-
-const projects = [
-  { name: "NeuralDeploy", desc: "One-click ML model deployment. Next.js, Python, Docker.", stars: 412, verified: true, featured: true },
-  { name: "FormForge", desc: "AI-powered form builder with validation generation.", stars: 187, verified: true, featured: false },
-  { name: "PixelSync", desc: "Real-time collaborative design annotation tool.", stars: 156, verified: true, featured: false },
-];
-
-const achievements = [
-  { title: "Won AI Challenge - Week 22", desc: "RAG pipeline scoring 94% on domain QA", xp: "+250 XP" },
-  { title: "7-Week Shipping Streak", desc: "Consecutive weekly verified commits", xp: "+90 XP" },
-  { title: "Reached Tier 4", desc: "Top 5% of all ranked developers", xp: "+500 XP" },
-];
-
-const badges = [
-  { label: "Early Adopter", icon: Shield },
-  { label: "Challenge Winner", icon: Trophy },
-  { label: "7-Week Streak", icon: Flame },
-  { label: "Open Source", icon: Github },
-  { label: "AI Builder", icon: Zap },
-  { label: "Verified x3", icon: BadgeCheck },
-];
-
-const generateHeatmapData = () => {
-  const data: number[][] = [];
-  for (let w = 0; w < 52; w++) {
-    const week: number[] = [];
-    for (let d = 0; d < 7; d++) {
-      const base = Math.random();
-      if (w > 40) week.push(base > 0.3 ? Math.ceil(Math.random() * 4) : 0);
-      else if (w > 30) week.push(base > 0.5 ? Math.ceil(Math.random() * 3) : 0);
-      else week.push(base > 0.6 ? Math.ceil(Math.random() * 2) : 0);
-    }
-    data.push(week);
-  }
-  return data;
-};
-const heatmapData = generateHeatmapData();
-
-function heatmapColor(level: number): string {
-  switch (level) {
-    case 0: return "bg-muted/20";
-    case 1: return "bg-ember/20";
-    case 2: return "bg-ember/40";
-    case 3: return "bg-ember/60";
-    case 4: return "bg-ember/80";
-    default: return "bg-ember";
-  }
-}
+import {
+  useCreateProjectMutation,
+  useDeleteProjectMutation,
+  useProjectsQuery,
+} from "../useProjects";
+import type { TechOption } from "../profileData";
+import { LinkedProvidersSection } from "./LinkedProvidersSection";
+import { useGithubLanguages } from "../useGithubLanguages";
+import ProfileBanner from "./ProfileBanner";
+import ProfileIdentityCard from "./ProfileIdentityCard";
+import ProfileSecondary from "./ProfileSecondary";
+import ProfileStickyRail from "./ProfileStickyRail";
+import {
+  EditProfileDialog,
+  ProfileGuestGate,
+  SocialListDialog,
+  TechDialog,
+} from "./ProfileDialogs";
 
 type ProfileAuthMode = "login" | "signup";
 
-/* â”€â”€ Edit Profile Dialog â”€â”€ */
-function EditProfileDialog({
-  open,
-  onOpenChange,
-  onSaved,
-}: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  onSaved?: (next: { username?: string | null }) => void;
-}) {
-  const { profile, userId, refreshProfile } = useAuth();
-
-  const [fullName, setFullName] = useState(profile?.full_name ?? "");
-  const [username, setUsername] = useState(profile?.username ?? "");
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setAvatarFile(file);
-    const url = URL.createObjectURL(file);
-    setAvatarPreview(url);
-  };
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!userId) return;
-
-    try {
-      setSaving(true);
-
-      let avatarUrl: string | undefined;
-      if (avatarFile) {
-        avatarUrl = await uploadAvatar(userId, avatarFile);
-      }
-
-      const fields: Record<string, string> = {};
-      const trimmedName = fullName.trim();
-      const trimmedUsername = username.trim().toLowerCase().replace(/^@/, "");
-
-      if (trimmedName) fields.full_name = trimmedName;
-      if (trimmedUsername) fields.username = trimmedUsername;
-      if (avatarUrl) fields.avatar_url = avatarUrl;
-
-      let nextUsername: string | null = null;
-      if (Object.keys(fields).length > 0) {
-        const updated = await updateProfile(userId, fields);
-        nextUsername = updated?.username ?? fields.username ?? null;
-      }
-
-      await refreshProfile();
-      onSaved?.({ username: nextUsername });
-      toast("Profile updated");
-      onOpenChange(false);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to update profile.";
-      toast(msg);
-      console.error("EditProfile error:", err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const previewUrl = avatarPreview || profile?.avatar_url;
-  const initial = (profile?.full_name || profile?.username || "U").charAt(0).toUpperCase();
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-surface max-w-[420px] border-border/60 p-0 gap-0 overflow-hidden">
-        <div className="p-6 pb-0">
-          <DialogHeader className="text-center sm:text-center space-y-2">
-            <DialogTitle className="font-display text-xl font-bold tracking-tight">
-              Edit profile
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Update your name, handle, or profile picture.
-            </DialogDescription>
-          </DialogHeader>
-        </div>
-
-        <form onSubmit={handleSave} className="p-6 space-y-5">
-          {/* Avatar picker */}
-          <div className="flex justify-center">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="relative group"
-            >
-              <Avatar className="h-20 w-20">
-                {previewUrl && <AvatarImage src={previewUrl} alt="Avatar" />}
-                <AvatarFallback
-                  className="font-display text-2xl font-bold text-ember"
-                  style={{ background: "linear-gradient(135deg, hsl(var(--ember) / 0.3), hsl(var(--ember-glow) / 0.2))" }}
-                >
-                  {initial}
-                </AvatarFallback>
-              </Avatar>
-              <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <Camera size={20} className="text-white" />
-              </div>
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-fullname" className="text-xs text-muted-foreground">
-              Full name
-            </Label>
-            <Input
-              id="edit-fullname"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Your full name"
-              className="bg-muted/30 border-border/60 focus-visible:ring-ember/50"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-username" className="text-xs text-muted-foreground">
-              Username <span className="text-muted-foreground/50">(optional)</span>
-            </Label>
-            <Input
-              id="edit-username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="your_handle"
-              className="bg-muted/30 border-border/60 focus-visible:ring-ember/50"
-            />
-          </div>
-
-          <button type="submit" className="btn-primary w-full" disabled={saving}>
-            {saving ? "Saving..." : "Save changes"}
-          </button>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/* â”€â”€ Profile Page â”€â”€ */
-const Profile = () => {
+const ProfilePageContent = () => {
   const navigate = useNavigate();
   const { username: routeUsername } = useParams<{ username: string }>();
-  const { profile: authProfile, session, userId: authUserId, loading: authLoading } = useAuth();
+  const {
+    profile: authProfile,
+    session,
+    userId: authUserId,
+    loading: authLoading,
+  } = useAuth();
 
   const isOwnProfile = useMemo(() => {
     if (!authProfile || !routeUsername) return false;
@@ -261,16 +74,23 @@ const Profile = () => {
   const profile = isOwnProfile
     ? authProfile
     : externalProfileQuery.data ?? null;
+  const isProfileUnlocked = Boolean(profile?.is_verified);
+  const hasVerifiedBadge = Boolean(profile?.email_2fa_enabled);
 
   const resolvedUserId = isOwnProfile
     ? authUserId
     : externalProfileQuery.data?.id ?? null;
 
   const userPostsQuery = useUserPostsInfiniteQuery(authUserId, resolvedUserId);
+  const projectsQuery = useProjectsQuery(resolvedUserId);
+  const createProjectMutation = useCreateProjectMutation(
+    isOwnProfile ? authUserId : null,
+  );
+  const deleteProjectMutation = useDeleteProjectMutation(
+    isOwnProfile ? authUserId : null,
+  );
   const profileProgressQuery = useProfileProgressQuery(resolvedUserId);
-  const profileEvaluationQuery = useProfileEvaluationQuery(resolvedUserId);
   const profileProgress = profileProgressQuery.data ?? null;
-  const profileEvaluation = profileEvaluationQuery.data ?? null;
   const followStateQuery = useFollowStateQuery(
     authUserId,
     resolvedUserId,
@@ -287,6 +107,8 @@ const Profile = () => {
         ? `${userPosts.length}+`
         : String(userPosts.length);
 
+  /* Post-interaction state (comments + lightbox), preserved from the previous
+     implementation so all wiring + Explore mutations still flow through. */
   const [openCommentsPostId, setOpenCommentsPostId] = useState<string | null>(
     null,
   );
@@ -347,17 +169,13 @@ const Profile = () => {
     }
     const trimmed = commentDraft.trim();
     if (!trimmed) return;
-
     commentMutation.mutate(
       { postId, content: trimmed },
-      {
-        onSuccess: () => {
-          setCommentDraft("");
-        },
-      },
+      { onSuccess: () => setCommentDraft("") },
     );
   };
 
+  /* UI toggles */
   const [editOpen, setEditOpen] = useState(false);
   const [authGateOpen, setAuthGateOpen] = useState(false);
   const [authGateMode, setAuthGateMode] = useState<ProfileAuthMode>("login");
@@ -371,67 +189,53 @@ const Profile = () => {
 
   const showGuestGate = !authLoading && !session;
 
-  const displayName = useMemo(() => {
-    if (authLoading && isOwnProfile) return "Loading...";
-    return profile?.full_name?.trim() || "Your Name";
-  }, [profile, authLoading, isOwnProfile]);
-
-  const displayUsername = useMemo(() => {
-    if (authLoading && isOwnProfile) return "loading";
-    return profile?.username?.trim() || "your_handle";
-  }, [profile, authLoading, isOwnProfile]);
-
-  const avatarInitial = useMemo(() => {
-    const source = profile?.full_name || profile?.username || "U";
-    return source.charAt(0).toUpperCase();
-  }, [profile]);
+  const displayName =
+    (authLoading && isOwnProfile)
+      ? "Loading…"
+      : profile?.full_name?.trim() || "Your Name";
+  const displayUsername =
+    (authLoading && isOwnProfile)
+      ? "loading"
+      : profile?.username?.trim() || "your_handle";
 
   const profileHeadline = "Software Engineer";
-  const profileLocation = "Global";
+  const profileLocation = "Global · BiH 🇧🇦";
   const profileBio =
-    "Full-stack builder. Obsessed with developer tools and AI infra. Shipping every week, proving every day - performance, DX, and taste.";
+    "Full-stack builder obsessed with developer tools and AI infra. Shipping every week, proving every day — performance, DX, and taste.";
+
+  const currentTierCode = profileProgress?.tierCode ?? null;
   const currentTierName = profileProgress?.tierName ?? "Unranked";
   const currentScore = profileProgress?.totalScore ?? 0;
-  const currentTierMinScore = profileProgress?.tierMinScore ?? 0;
   const nextTierName = profileProgress?.nextTierName ?? null;
-  const nextTierMinScore = profileProgress?.nextTierMinScore ?? null;
   const pointsToNextTier = profileProgress?.pointsToNextTier ?? 0;
   const progressToNext = profileProgress?.progressToNextTierPct ?? 0;
-  const countryRankLabel = profileProgress?.countryRank ? "Country Rank" : "Region Rank";
-  const globalPercentileLabel = `Top ${Math.max(1, Math.round(profileProgress?.globalPercentile ?? 100))}%`;
+  const followersCount = profileProgress?.followersCount ?? 0;
+  const followingCount = profileProgress?.followingCount ?? 0;
+  const weeklyScore = profileProgress?.weeklyScore ?? 0;
+  const globalPercentile = profileProgress?.globalPercentile ?? 100;
 
-  const monthlyStats = [
-    { label: "Posts", value: String(profileProgress?.postsLast30d ?? 0), sub: "last 30 days" },
-    { label: "Weekly Score", value: `+${profileProgress?.weeklyScore ?? 0}`, sub: "this week" },
-    { label: "Challenges", value: String(profileProgress?.challengeWinsCount ?? 0), sub: "won" },
-    { label: "Rank Delta", value: `+${Math.max(0, profileProgress?.weeklyScore ?? 0)}`, sub: "momentum" },
-  ];
+  // Read directly from the Supabase session instead of a second
+  // useLinkedProviders fetch — LinkedProvidersSection already owns that
+  // call. session.user.identities is the source of truth for which
+  // providers the signed-in user has connected.
+  const isGithubLinked =
+    isOwnProfile &&
+    Boolean(
+      session?.user?.identities?.some((i) => i.provider === "github"),
+    );
 
-  const allTimeStats = [
-    { label: "Total Score", value: Intl.NumberFormat("en-US").format(currentScore) },
-    { label: "Best Streak", value: `${profileProgress?.bestStreakWeeks ?? 0}w` },
-    { label: "Followers", value: Intl.NumberFormat("en-US").format(profileProgress?.followersCount ?? 0) },
-    { label: "Following", value: Intl.NumberFormat("en-US").format(profileProgress?.followingCount ?? 0) },
-  ];
+  // GitHub top languages for the viewed profile — populated by the backend
+  // sync (profile_external_accounts.metadata.top_languages). Drives the
+  // // stack card when present.
+  const githubLanguagesQuery = useGithubLanguages(resolvedUserId);
+  const githubLanguages = githubLanguagesQuery.data ?? [];
 
-  const mutualDevelopers = [
-    { name: "Sara K.", username: "sarakdev" },
-    { name: "Amir H.", username: "amirh_" },
-    { name: "Lena M.", username: "lenam" },
-    { name: "Dino B.", username: "dinob" },
-  ];
-
-  const techOptions = [
-    "React", "TypeScript", "Node.js", "PostgreSQL", "Next.js",
-    "Docker", "Python", "Rust", "Go", "AI/ML",
-  ] as const;
-  const [topTech, setTopTech] = useState<string[]>(["React", "TypeScript", "Node.js"]);
-  const subSkills = useMemo(
-    () => techOptions.filter((t) => !topTech.includes(t)),
-    [topTech],
-  );
-
-  const toggleTopTech = (t: string) => {
+  const [topTech, setTopTech] = useState<string[]>([
+    "React",
+    "TypeScript",
+    "Node.js",
+  ]);
+  const toggleTopTech = (t: TechOption) => {
     setTopTech((prev) => {
       if (prev.includes(t)) return prev.filter((x) => x !== t);
       if (prev.length >= 3) return prev;
@@ -449,601 +253,146 @@ const Profile = () => {
     followMutation.mutate(Boolean(followStateQuery.data?.isFollowing));
   };
 
+  const handleAddProject = async (input: {
+    name: string;
+    description?: string;
+    repoUrl?: string;
+    liveUrl?: string;
+  }) => {
+    await createProjectMutation.mutateAsync(input);
+  };
+
+  const handleDeleteProject = (projectId: string) => {
+    if (deleteProjectMutation.isPending) return;
+    deleteProjectMutation.mutate(projectId);
+  };
+
   return (
-    <div className="min-h-screen bg-background relative">
-      <ProfileMotif />
+    <div className="min-h-screen bg-ink text-cream font-grot relative">
       <Navbar />
 
-      {/* Guest gate */}
       {showGuestGate && (
-        <div
-          className="fixed inset-x-0 top-16 bottom-0 z-40 flex items-center justify-center bg-background/80 backdrop-blur-md px-4 py-10"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="profile-guest-title"
-          aria-describedby="profile-guest-desc"
-        >
-          <motion.div
-            initial={{ opacity: 0, y: 12, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className="glass-surface w-full max-w-md border border-border/60 p-8 text-center shadow-[0_0_60px_-12px_hsl(var(--ember)/0.25)]"
-          >
-            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-ember/15 ring-1 ring-ember/25" aria-hidden>
-              <Lock className="h-6 w-6 text-ember" />
-            </div>
-            <h2 id="profile-guest-title" className="font-display text-xl font-bold tracking-tight text-foreground mb-2">
-              Sign in to unlock your profile
-            </h2>
-            <p id="profile-guest-desc" className="text-sm text-muted-foreground leading-relaxed mb-8">
-              Log in or create an account to edit your profile, avatar, and handle - and connect your Tierd. builder identity.
-            </p>
-            <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-              <button type="button" className="btn-primary text-sm px-6 py-2.5 w-full sm:w-auto" onClick={() => { setAuthGateMode("login"); setAuthGateOpen(true); }}>
-                Log in
-              </button>
-              <button type="button" className="w-full sm:w-auto rounded-md border border-border/60 bg-muted/20 px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/40" onClick={() => { setAuthGateMode("signup"); setAuthGateOpen(true); }}>
-                Sign up
-              </button>
-            </div>
-          </motion.div>
-        </div>
+        <ProfileGuestGate
+          onAuth={(mode) => {
+            setAuthGateMode(mode);
+            setAuthGateOpen(true);
+          }}
+        />
       )}
 
-      <div className={`pt-24 pb-0 relative z-10 ${showGuestGate ? "pointer-events-none select-none opacity-40" : ""}`}>
-
+      <div
+        className={`pt-24 pb-0 relative z-10 ${showGuestGate ? "pointer-events-none select-none opacity-40" : ""}`}
+      >
         <motion.section
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="section-container mt-5 mb-10"
+          className="section-container mt-5"
         >
-          {/* Banner â€” inset, rounded, blends into hero */}
-          <div className="rounded-2xl border border-border/25 bg-muted/[0.03] overflow-hidden ring-1 ring-border/10">
-            <div
-              className="relative h-40 sm:h-48"
-              style={{
-                background:
-                  "radial-gradient(720px 220px at 18% 28%, hsl(var(--ember) / 0.22), transparent 58%), radial-gradient(560px 200px at 88% 8%, hsl(var(--ember-glow) / 0.14), transparent 62%), linear-gradient(188deg, hsl(var(--glass) / 0.85) 0%, hsl(var(--background) / 0.75) 100%)",
-              }}
-            >
-              <div
-                className="absolute inset-0 opacity-[0.05]"
-                aria-hidden
-                style={{
-                  backgroundImage:
-                    "linear-gradient(hsl(var(--glass-border)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--glass-border)) 1px, transparent 1px)",
-                  backgroundSize: "48px 48px",
-                }}
-              />
-              <div
-                className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-b from-transparent via-background/35 to-background"
-                aria-hidden
-              />
-            </div>
-          </div>
+          <ProfileBanner isOwn={isOwnProfile} />
 
-          {/* Row A â€” identity | rank + next tier */}
-          <div className="relative z-10 -mt-12 sm:-mt-14">
-            <div className="grid lg:grid-cols-[1fr_minmax(280px,340px)] gap-8 lg:gap-10 items-start">
-
-              {/* Left: Identity (no technologies here) */}
-              <div>
-                {/* Avatar row */}
-                <div className="flex items-end gap-5 sm:gap-6">
-                  <div className="shrink-0">
-                    <Avatar className="h-24 w-24 sm:h-28 sm:w-28 ring-[4px] ring-background shadow-[0_8px_32px_-8px_hsl(var(--ember)/0.4)]">
-                      {profile?.avatar_url && (
-                        <AvatarImage src={profile.avatar_url} alt={displayName} />
-                      )}
-                      <AvatarFallback
-                        className="font-display text-3xl font-bold text-ember sm:text-4xl"
-                        style={{ background: "linear-gradient(135deg, hsl(var(--ember) / 0.25), hsl(var(--ember-glow) / 0.15))" }}
-                      >
-                        {avatarInitial}
-                      </AvatarFallback>
-                    </Avatar>
-                  </div>
-
-                  {/* Stats + Edit */}
-                  <div className="flex flex-1 items-end justify-between gap-4 min-w-0 pb-1">
-                    <div className="flex items-center gap-5 sm:gap-7">
-                      <div className="text-center">
-                        <p className="font-display font-bold text-lg leading-tight text-foreground">{postsCountLabel}</p>
-                        <p className="text-xs text-muted-foreground/45 uppercase tracking-wider">Posts</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setFollowingOpen(true)}
-                        className="text-center transition-opacity hover:opacity-90"
-                      >
-                        <p className="font-display font-bold text-lg leading-tight text-foreground">
-                          {profileProgress?.followingCount ?? 0}
-                        </p>
-                        <p className="text-xs text-muted-foreground/45 uppercase tracking-wider">Following</p>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFollowersOpen(true)}
-                        className="text-center transition-opacity hover:opacity-90"
-                      >
-                        <p className="font-display font-bold text-lg leading-tight text-foreground">
-                          {profileProgress?.followersCount ?? 0}
-                        </p>
-                        <p className="text-xs text-muted-foreground/45 uppercase tracking-wider">Followers</p>
-                      </button>
-                    </div>
-                    {isOwnProfile && profile ? (
-                      <button
-                        onClick={() => setEditOpen(true)}
-                        className="shrink-0 rounded-lg border border-border/30 bg-muted/10 px-4 py-2 text-xs font-medium text-muted-foreground/60 transition-all hover:bg-muted/20 hover:text-foreground hover:border-border/50"
-                        type="button"
-                      >
-                        <Pencil size={13} className="inline mr-1.5 -mt-0.5" />
-                        Edit
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleToggleFollow}
-                        disabled={followMutation.isPending}
-                        className="shrink-0 rounded-lg border border-border/30 bg-muted/10 px-4 py-2 text-xs font-medium text-muted-foreground/60 transition-all hover:bg-muted/20 hover:text-foreground hover:border-border/50 disabled:opacity-50"
-                      >
-                        {followMutation.isPending ? (
-                          "Updating..."
-                        ) : followStateQuery.data?.isFollowing ? (
-                          <>
-                            <UserCheck size={13} className="inline mr-1.5 -mt-0.5" />
-                            Following
-                          </>
-                        ) : (
-                          <>
-                            <UserPlus size={13} className="inline mr-1.5 -mt-0.5" />
-                            Follow
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Name + headline + location */}
-                <div className="mt-4 space-y-1.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="font-title max-w-full truncate text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-                      {displayName}
-                    </h1>
-                    <BadgeCheck size={20} className="shrink-0 text-ember" aria-hidden />
-                  </div>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                    <span className="font-medium text-foreground/70">{profileHeadline}</span>
-                    <span className="text-border/50">·</span>
-                    <span className="text-muted-foreground/55">@{displayUsername}</span>
-                  </div>
-                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground/50">
-                    <MapPin size={12} className="shrink-0" aria-hidden />
-                    <span>{profileLocation}</span>
-                  </p>
-                </div>
-
-                {/* Bio + Social links */}
-                <div className="mt-4 space-y-3">
-                  <p className={`text-sm leading-relaxed text-foreground/80 ${bioExpanded ? "" : "line-clamp-2"}`}>
-                    {profileBio}
-                  </p>
-                  {profileBio.length > 120 && (
-                    <button
-                      type="button"
-                      onClick={() => setBioExpanded((v) => !v)}
-                      className="text-xs font-medium text-ember/65 transition-colors hover:text-ember"
-                    >
-                      {bioExpanded ? "Show less" : "Show more"}
-                    </button>
-                  )}
-                  <div className="flex flex-wrap gap-2">
-                    <a href="#" className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border/30 bg-muted/8 px-3 text-xs text-muted-foreground/65 transition-all hover:border-border/50 hover:text-foreground">
-                      <Github size={13} /> GitHub
-                    </a>
-                    <a href="#" className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border/30 bg-muted/8 px-3 text-xs text-muted-foreground/65 transition-all hover:border-border/50 hover:text-foreground">
-                      <Globe size={13} /> Website
-                    </a>
-                  </div>
-                </div>
-
-                {/* Mutuals */}
-                <div className="mt-4 flex items-center gap-3.5 rounded-xl border border-border/20 bg-muted/5 px-4 py-2.5">
-                  <div className="flex -space-x-2 shrink-0">
-                    {mutualDevelopers.slice(0, 4).map((m) => (
-                      <div
-                        key={m.username}
-                        className="h-7 w-7 rounded-full border-2 border-background bg-muted/30 flex items-center justify-center text-[10px] font-semibold text-muted-foreground/60"
-                        title={`${m.name} (@${m.username})`}
-                      >
-                        {m.name.charAt(0).toUpperCase()}
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground/50">
-                    <span className="text-foreground/70 font-medium">{mutualDevelopers.length} mutual developers</span> you both follow
-                  </p>
-                </div>
-              </div>
-
-              {/* Right: Rank card (stretched taller) */}
-              <div className="rounded-2xl border border-border/20 bg-muted/4 p-5 flex flex-col">
-                <div className="flex items-center gap-2 mb-4">
-                  <Trophy size={13} className="text-ember" />
-                  <h3 className="font-display font-bold text-[10px] text-muted-foreground/50 uppercase tracking-[0.15em]">Rank</h3>
-                </div>
-                <div className="text-center mb-5">
-                  <div
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl"
-                    style={{
-                      background: "linear-gradient(135deg, hsl(var(--ember) / 0.12), hsl(var(--ember-glow) / 0.06))",
-                      border: "1px solid hsl(var(--ember) / 0.2)",
-                    }}
-                  >
-                    <span className="font-display font-bold text-3xl gradient-text">{currentTierName}</span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2 flex-1">
-                  {[
-                    { label: "Score", value: Intl.NumberFormat("en-US").format(currentScore) },
-                    { label: "Global Rank", value: profileProgress?.globalRank ? `#${profileProgress.globalRank}` : "-" },
-                    { label: countryRankLabel, value: profileProgress?.countryRank ? `#${profileProgress.countryRank}` : "-" },
-                    { label: "This Week", value: `+${profileProgress?.weeklyScore ?? 0}` },
-                    { label: "Percentile", value: globalPercentileLabel },
-                    { label: "Eval Score", value: profileEvaluation ? Intl.NumberFormat("en-US").format(profileEvaluation.totalScore) : "-" },
-                  ].map((s) => (
-                    <div key={s.label} className="text-center p-3 rounded-xl bg-muted/6 flex flex-col items-center justify-center">
-                      <p className="font-display font-bold text-sm text-foreground">{s.value}</p>
-                      <p className="text-[9px] text-muted-foreground/35 uppercase tracking-wider">{s.label}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Row B â€” badges | technologies | monthly + all-time */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.04 }}
-            className="mt-8 lg:mt-10 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-5"
-          >
-            <div className="min-w-0 rounded-2xl border border-border/20 bg-muted/4 p-4 lg:p-5">
-              <h2 className="font-display font-bold text-[10px] text-muted-foreground/50 uppercase tracking-[0.15em] mb-3 flex items-center gap-2">
-                <Award size={13} className="text-ember shrink-0" /> Badges
-              </h2>
-              <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-thin">
-                {badges.map((b) => {
-                  const Icon = b.icon;
-                  return (
-                    <div
-                      key={b.label}
-                      className="flex items-center gap-2 shrink-0 rounded-xl border border-border/20 bg-muted/5 px-3 py-2.5 transition-all hover:border-ember/15 hover:bg-ember/[0.03] group"
-                    >
-                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-ember/8 group-hover:bg-ember/12 transition-colors shrink-0">
-                        <Icon size={13} className="text-ember/70" />
-                      </div>
-                      <span className="text-[11px] font-medium text-foreground/75 whitespace-nowrap">{b.label}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="min-w-0 rounded-2xl border border-border/20 bg-muted/4 p-4 lg:p-5">
-              <div className="flex items-center justify-between gap-3 mb-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/45">
-                  Technologies
-                </p>
-                {isOwnProfile ? (
-                  <button
-                    type="button"
-                    onClick={() => setTechOpen(true)}
-                    className="text-[11px] font-medium text-ember/65 transition-colors hover:text-ember"
-                  >
-                    Edit
-                  </button>
-                ) : null}
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {topTech.map((t) => (
-                  <span
-                    key={t}
-                    className="inline-flex h-7 items-center rounded-lg px-2.5 text-[11px] font-bold text-ember"
-                    style={{ background: "hsl(var(--ember) / 0.1)", border: "1px solid hsl(var(--ember) / 0.2)" }}
-                  >
-                    {t}
-                  </span>
-                ))}
-                {subSkills.slice(0, 4).map((t) => (
-                  <span
-                    key={t}
-                    className="inline-flex h-7 items-center rounded-lg border border-border/25 bg-muted/8 px-2.5 text-[11px] font-medium text-muted-foreground/65"
-                  >
-                    {t}
-                  </span>
-                ))}
-                {subSkills.length > 4 && (
-                  <span className="inline-flex h-7 items-center rounded-lg border border-border/15 bg-muted/5 px-2.5 text-[11px] text-muted-foreground/35">
-                    +{subSkills.length - 4}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Tier Progress */}
-            <div className="min-w-0 rounded-2xl border border-border/20 bg-muted/4 p-4 lg:p-5">
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/40 font-bold">Next Tier</p>
-                {nextTierName && (
-                  <p className="text-[11px] text-muted-foreground/45">
-                    <span className="text-ember font-bold">{pointsToNextTier}</span> pts away
-                  </p>
-                )}
-              </div>
-              {nextTierName ? (
-                <>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground/50 mb-2">
-                    <span className="font-bold text-foreground/70">{currentTierName}</span>
-                    <span className="font-bold text-foreground/70">{nextTierName}</span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-muted/15 overflow-hidden">
-                    <motion.div
-                      className="h-full rounded-full"
-                      style={{ background: "linear-gradient(90deg, hsl(var(--ember)), hsl(var(--ember-glow)))" }}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${progressToNext}%` }}
-                      transition={{ duration: 1, delay: 0.3 }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-[10px] text-muted-foreground/35 mt-1.5">
-                    <span>{currentTierMinScore}</span>
-                    <span className="text-ember font-bold text-[11px]">{currentScore}</span>
-                    <span>{nextTierMinScore ?? "-"}</span>
-                  </div>
-                </>
-              ) : (
-                <p className="text-xs text-muted-foreground/55">Top tier reached.</p>
-              )}
-            </div>
-          </motion.div>
-
-          {/* Row C â€” Monthly+All-time | Activity heatmap */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.08 }}
-            className="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-6"
-          >
-            {/* Stats columns */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-border/20 bg-muted/4 p-4">
-                <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/40 mb-3 font-bold">This month</p>
-                <div className="space-y-2.5">
-                  {monthlyStats.map((s) => (
-                    <div key={s.label}>
-                      <p className="font-display font-bold text-base text-foreground leading-tight">{s.value}</p>
-                      <p className="text-[9px] text-muted-foreground/50">{s.label}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="rounded-2xl border border-border/20 bg-muted/4 p-4">
-                <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/40 mb-3 font-bold">All time</p>
-                <div className="space-y-2.5">
-                  {allTimeStats.map((s) => (
-                    <div key={s.label}>
-                      <p className="font-display font-bold text-base text-foreground leading-tight">{s.value}</p>
-                      <p className="text-[9px] text-muted-foreground/50">{s.label}</p>
-                    </div>
-                  ))}
-                </div>
-                {profileEvaluation?.breakdown?.length ? (
-                  <div className="mt-4 border-t border-border/20 pt-3 space-y-2">
-                    <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/40 font-bold">
-                      Evaluation
-                    </p>
-                    {profileEvaluation.breakdown.map((entry) => (
-                      <div key={entry.source} className="flex items-center justify-between gap-2 text-[10px]">
-                        <span className="text-muted-foreground/60">{entry.source.replace("_", " ")}</span>
-                        <span className="font-semibold text-foreground">+{entry.score}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
-            {/* Activity heatmap */}
-            <div className="rounded-2xl border border-border/20 bg-muted/4 p-5">
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/40 font-bold flex items-center gap-2">
-                  <TrendingUp size={12} className="text-ember" /> Activity - Last 52 Weeks
-                </p>
-                <div className="flex items-center gap-1 text-[9px] text-muted-foreground/35">
-                  <span>Less</span>
-                  {[0, 1, 2, 3, 4].map((l) => (
-                    <div key={l} className={`w-2.5 h-2.5 rounded-sm ${heatmapColor(l)}`} />
-                  ))}
-                  <span>More</span>
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <div className="flex gap-[3px]" style={{ minWidth: 680 }}>
-                  {heatmapData.map((week, wi) => (
-                    <div key={wi} className="flex flex-col gap-[3px]">
-                      {week.map((day, di) => (
-                        <div
-                          key={di}
-                          className={`w-[11px] h-[11px] rounded-[2px] ${heatmapColor(day)} transition-colors`}
-                          title={`Week ${wi + 1}, Day ${di + 1}: ${day} contributions`}
-                        />
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <p className="text-[10px] text-muted-foreground/35 mt-3">
-                <span className="font-bold text-foreground/60">312</span> contributions in the last year
-              </p>
-            </div>
-          </motion.div>
+          <ProfileIdentityCard
+            displayName={displayName}
+            username={displayUsername}
+            avatarUrl={profile?.avatar_url}
+            headline={profileHeadline}
+            location={profileLocation}
+            bio={profileBio}
+            bioExpanded={bioExpanded}
+            onToggleBio={() => setBioExpanded((v) => !v)}
+            isOwnProfile={isOwnProfile}
+            isFollowing={Boolean(followStateQuery.data?.isFollowing)}
+            followPending={followMutation.isPending}
+            onEdit={() => setEditOpen(true)}
+            onToggleFollow={handleToggleFollow}
+            isUnlocked={isProfileUnlocked}
+            isVerifiedBadge={hasVerifiedBadge}
+          />
         </motion.section>
 
-        {/* Posts + sticky Projects / Achievements */}
-        <div className="section-container pb-20">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
-            <div className="lg:col-span-7 min-w-0">
-              <div className="mb-5 flex items-end justify-between gap-4 border-b border-border/20 pb-4">
-                <div>
-                  <h2 className="font-display text-lg font-bold tracking-tight text-foreground">Posts</h2>
-                  <p className="mt-0.5 text-xs text-muted-foreground/45">
-                    {userPostsQuery.hasNextPage
-                      ? `${userPosts.length} shown - more below`
-                      : `${userPosts.length} ${userPosts.length === 1 ? "post" : "posts"}`}
-                  </p>
-                </div>
-              </div>
+        {/* Main grid — LEFT: stats + badges + projects + posts.
+            RIGHT (sticky): tier + activity + tech + endorsement. */}
+        <div className="section-container pb-20 mt-9">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-7 items-start">
+            <main className="lg:col-span-7 min-w-0 space-y-6">
+              <ProfileSecondary
+                userId={resolvedUserId}
+                postsLabel={postsCountLabel}
+                followersCount={followersCount}
+                followingCount={followingCount}
+                currentScore={currentScore}
+                onOpenFollowers={() => setFollowersOpen(true)}
+                onOpenFollowing={() => setFollowingOpen(true)}
+                projects={projectsQuery.data ?? []}
+                projectsLoading={projectsQuery.isPending}
+                canManageProjects={isOwnProfile}
+                addingProject={createProjectMutation.isPending}
+                deletingProjectId={deleteProjectMutation.variables ?? null}
+                onAddProject={handleAddProject}
+                onDeleteProject={handleDeleteProject}
+              />
 
-              <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                {userPostsQuery.isPending ? (
-                  <div className="rounded-2xl border border-border/20 bg-muted/3 p-8">
-                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground/50">
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-ember/30 border-t-ember" />
-                      Loading posts...
-                    </div>
+              {isOwnProfile && (
+                <div className="rounded-[18px] border border-ink-line bg-ink-2 p-5">
+                  <LinkedProvidersSection />
+                </div>
+              )}
+
+              <section>
+                <div className="mb-4 flex items-end justify-between gap-4 border-b border-dashed border-cream/10 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <Doodle.Pulse size={14} className="text-orange" />
+                    <MonoCaption tone="cream">// posts</MonoCaption>
+                    <span className="font-mono-jb text-[10px] text-muted-ink uppercase tracking-[0.08em]">
+                      {userPostsQuery.hasNextPage
+                        ? `${userPosts.length} shown · more below`
+                        : `${userPosts.length} ${userPosts.length === 1 ? "post" : "posts"}`}
+                    </span>
                   </div>
-                ) : userPosts.length === 0 ? (
-                  <div className="rounded-2xl border border-border/20 bg-muted/3 p-10 text-center">
-                    <Sparkles size={24} className="mx-auto mb-2 text-ember/50" />
-                    <p className="text-sm font-medium text-foreground/70">No posts yet</p>
-                    <p className="mt-1 text-xs text-muted-foreground/45">
-                      {isOwnProfile
-                        ? "Head to Explore to share your first update."
-                        : "This builder hasn't posted anything yet."}
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="rounded-2xl border border-border/20 bg-muted/3 overflow-hidden">
-                      {userPosts.map((post, i) => (
-                        <ExplorePostCard
-                          key={post.id}
-                          post={post}
-                          index={i}
-                          isCommentsOpen={openCommentsPostId === post.id}
-                          comments={
-                            openCommentsPostId === post.id &&
-                            commentsFetchPostId === post.id
-                              ? commentsForActivePost
-                              : []
-                          }
-                          commentsLoading={
-                            openCommentsPostId === post.id &&
-                            commentsLoadingActive
-                          }
-                          commentDraft={commentDraft}
-                          commentSubmitting={
-                            commentMutation.isPending &&
-                            commentMutation.variables?.postId === post.id
-                          }
-                          onToggleLike={() => handleToggleLike(post.id)}
-                          onToggleComments={() => handleToggleComments(post.id)}
-                          onChangeCommentDraft={setCommentDraft}
-                          onSubmitComment={() => handleSubmitComment(post.id)}
-                          onOpenMediaLightbox={() =>
-                            handleOpenMediaLightbox(post.id)
-                          }
-                        />
-                      ))}
-                    </div>
-                    {userPostsQuery.hasNextPage && (
-                      <div className="mt-5 flex justify-center">
-                        <button
-                          type="button"
-                          className="rounded-lg border border-border/40 bg-muted/10 px-5 py-2.5 text-sm font-medium text-foreground/80 transition-colors hover:bg-muted/20 hover:text-foreground disabled:opacity-50"
-                          disabled={userPostsQuery.isFetchingNextPage}
-                          onClick={() => void userPostsQuery.fetchNextPage()}
-                        >
-                          {userPostsQuery.isFetchingNextPage
-                            ? "Loading..."
-                            : "Load more posts"}
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )}
-              </motion.section>
-            </div>
+                </div>
+
+                <PostsList
+                  isPending={userPostsQuery.isPending}
+                  isOwnProfile={isOwnProfile}
+                  userPosts={userPosts}
+                  openCommentsPostId={openCommentsPostId}
+                  commentsFetchPostId={commentsFetchPostId}
+                  commentsForActivePost={commentsForActivePost}
+                  commentsLoadingActive={commentsLoadingActive}
+                  commentDraft={commentDraft}
+                  commentMutationPending={commentMutation.isPending}
+                  commentMutationPostId={commentMutation.variables?.postId}
+                  onToggleLike={handleToggleLike}
+                  onToggleComments={handleToggleComments}
+                  onChangeCommentDraft={setCommentDraft}
+                  onSubmitComment={handleSubmitComment}
+                  onOpenMediaLightbox={handleOpenMediaLightbox}
+                  hasNextPage={Boolean(userPostsQuery.hasNextPage)}
+                  isFetchingNextPage={userPostsQuery.isFetchingNextPage}
+                  onFetchNext={() => void userPostsQuery.fetchNextPage()}
+                />
+              </section>
+            </main>
 
             <aside
-              className="lg:col-span-5 min-w-0 space-y-10 lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-6.5rem)] lg:overflow-y-auto lg:pb-2 lg:-mr-1 lg:pr-1"
-              aria-label="Projects and achievements"
+              className="lg:col-span-5 min-w-0 lg:sticky lg:top-[120px] self-start"
+              aria-label="Tier, activity, stack, and endorsements"
             >
-              <section>
-                <div className="mb-4 border-b border-border/20 pb-3">
-                  <h2 className="font-display text-lg font-bold tracking-tight text-foreground">Projects</h2>
-                  <p className="mt-0.5 text-xs text-muted-foreground/45">
-                    {projects.length} {projects.length === 1 ? "showcased build" : "showcased builds"}
-                  </p>
-                </div>
-                <div className="space-y-2.5">
-                  {projects.map((p, i) => (
-                    <div
-                      key={i}
-                      className="rounded-2xl border bg-muted/4 p-4 sm:p-5 transition-all hover:bg-muted/6 group"
-                      style={{ borderColor: p.featured ? "hsl(var(--ember) / 0.15)" : "hsl(var(--border) / 0.2)" }}
-                    >
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-display font-bold text-sm text-foreground group-hover:text-ember transition-colors">{p.name}</h3>
-                          {p.featured && (
-                            <span
-                              className="text-[10px] px-2 py-0.5 rounded-md bg-ember/8 text-ember font-bold"
-                              style={{ border: "1px solid hsl(var(--ember) / 0.15)" }}
-                            >
-                              Featured
-                            </span>
-                          )}
-                        </div>
-                        <ExternalLink size={12} className="shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/50 transition-colors" />
-                      </div>
-                      <p className="text-xs text-muted-foreground/55 mb-3 leading-relaxed">{p.desc}</p>
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground/45">
-                        {p.verified && (
-                          <span className="flex items-center gap-1 text-emerald-400/70">
-                            <BadgeCheck size={11} /> Verified
-                          </span>
-                        )}
-                        <span>Stars: {p.stars}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section>
-                <div className="mb-4 border-b border-border/20 pb-3">
-                  <h2 className="font-display text-lg font-bold tracking-tight text-foreground">Achievements</h2>
-                  <p className="mt-0.5 text-xs text-muted-foreground/45">Milestones and wins</p>
-                </div>
-                <div className="space-y-2.5">
-                  {achievements.map((a, i) => (
-                    <div key={i} className="rounded-2xl border border-border/20 bg-muted/4 p-4 sm:p-5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="font-display font-bold text-sm text-foreground mb-1">{a.title}</p>
-                          <p className="text-xs text-muted-foreground/50 leading-relaxed">{a.desc}</p>
-                        </div>
-                        <span className="text-xs font-bold text-ember/70 shrink-0">{a.xp}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
+              <ProfileStickyRail
+                tierCode={currentTierCode}
+                tierName={currentTierName}
+                currentScore={currentScore}
+                nextTierName={nextTierName}
+                pointsToNextTier={pointsToNextTier}
+                progressPct={progressToNext}
+                weeklyScore={weeklyScore}
+                globalPercentile={globalPercentile}
+                topTech={topTech}
+                onEditTech={() => setTechOpen(true)}
+                isOwnProfile={isOwnProfile}
+                profileId={resolvedUserId}
+                isGithubLinked={isGithubLinked}
+                githubLanguages={githubLanguages}
+              />
             </aside>
           </div>
         </div>
@@ -1071,146 +420,59 @@ const Profile = () => {
         />
       )}
 
-      {isOwnProfile ? (
+      {isOwnProfile && (
         <EditProfileDialog
           open={editOpen}
           onOpenChange={setEditOpen}
           onSaved={({ username }) => {
             const cleanNext = username?.trim().toLowerCase().replace(/^@/, "");
-            const cleanRoute = routeUsername?.trim().toLowerCase().replace(/^@/, "");
+            const cleanRoute = routeUsername
+              ?.trim()
+              .toLowerCase()
+              .replace(/^@/, "");
             if (!cleanNext) return;
             if (cleanRoute !== cleanNext) {
               navigate(`/profile/${cleanNext}`, { replace: true });
             }
           }}
         />
-      ) : null}
+      )}
 
-      <Dialog open={followersOpen} onOpenChange={setFollowersOpen}>
-        <DialogContent className="glass-surface max-w-[480px] border-border/60">
-          <DialogHeader>
-            <DialogTitle className="font-display text-xl font-bold tracking-tight">Followers</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Profiles that follow @{displayUsername}.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="max-h-[55vh] overflow-y-auto space-y-2">
-            {followersQuery.isPending ? (
-              <p className="text-sm text-muted-foreground/70">Loading followers...</p>
-            ) : (followersQuery.data ?? []).length === 0 ? (
-              <p className="text-sm text-muted-foreground/70">No followers yet.</p>
-            ) : (
-              (followersQuery.data ?? []).map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    setFollowersOpen(false);
-                    navigate(`/profile/${item.username ?? item.id}`);
-                  }}
-                  className="w-full flex items-center gap-3 rounded-lg border border-border/30 bg-muted/10 px-3 py-2 text-left hover:bg-muted/20"
-                >
-                  <Avatar className="h-9 w-9">
-                    {item.avatar_url ? <AvatarImage src={item.avatar_url} alt={item.full_name ?? "User"} /> : null}
-                    <AvatarFallback>{(item.full_name ?? item.username ?? "U").charAt(0).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{item.full_name ?? item.username ?? "User"}</p>
-                    <p className="text-xs text-muted-foreground/65 truncate">@{item.username ?? item.id.slice(0, 8)}</p>
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <SocialListDialog
+        open={followersOpen}
+        onOpenChange={setFollowersOpen}
+        title="followers"
+        description={`Profiles that follow @${displayUsername}.`}
+        items={followersQuery.data ?? []}
+        pending={followersQuery.isPending}
+        onNavigate={(item) => {
+          setFollowersOpen(false);
+          navigate(`/profile/${item.username ?? item.id}`);
+        }}
+      />
 
-      <Dialog open={followingOpen} onOpenChange={setFollowingOpen}>
-        <DialogContent className="glass-surface max-w-[480px] border-border/60">
-          <DialogHeader>
-            <DialogTitle className="font-display text-xl font-bold tracking-tight">Following</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Profiles followed by @{displayUsername}.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="max-h-[55vh] overflow-y-auto space-y-2">
-            {followingQuery.isPending ? (
-              <p className="text-sm text-muted-foreground/70">Loading following...</p>
-            ) : (followingQuery.data ?? []).length === 0 ? (
-              <p className="text-sm text-muted-foreground/70">Not following anyone yet.</p>
-            ) : (
-              (followingQuery.data ?? []).map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    setFollowingOpen(false);
-                    navigate(`/profile/${item.username ?? item.id}`);
-                  }}
-                  className="w-full flex items-center gap-3 rounded-lg border border-border/30 bg-muted/10 px-3 py-2 text-left hover:bg-muted/20"
-                >
-                  <Avatar className="h-9 w-9">
-                    {item.avatar_url ? <AvatarImage src={item.avatar_url} alt={item.full_name ?? "User"} /> : null}
-                    <AvatarFallback>{(item.full_name ?? item.username ?? "U").charAt(0).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{item.full_name ?? item.username ?? "User"}</p>
-                    <p className="text-xs text-muted-foreground/65 truncate">@{item.username ?? item.id.slice(0, 8)}</p>
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <SocialListDialog
+        open={followingOpen}
+        onOpenChange={setFollowingOpen}
+        title="following"
+        description={`Profiles followed by @${displayUsername}.`}
+        items={followingQuery.data ?? []}
+        pending={followingQuery.isPending}
+        onNavigate={(item) => {
+          setFollowingOpen(false);
+          navigate(`/profile/${item.username ?? item.id}`);
+        }}
+      />
 
-      {isOwnProfile ? (
-      <Dialog open={techOpen} onOpenChange={setTechOpen}>
-        <DialogContent className="glass-surface max-w-[520px] border-border/60">
-          <DialogHeader>
-            <DialogTitle className="font-display text-xl font-bold tracking-tight">
-              Technologies
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Pick your top 2-3 technologies (highlighted). You can adjust this later.
-            </DialogDescription>
-          </DialogHeader>
+      {isOwnProfile && (
+        <TechDialog
+          open={techOpen}
+          onOpenChange={setTechOpen}
+          topTech={topTech}
+          onToggle={toggleTopTech}
+        />
+      )}
 
-          <div className="space-y-3">
-            <div className="rounded-xl border border-border/40 bg-muted/15 p-3">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">
-                Top tech ({topTech.length}/3)
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {techOptions.map((t) => {
-                  const active = topTech.includes(t);
-                  return (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => toggleTopTech(t)}
-                      className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
-                        active
-                          ? "bg-ember/12 text-ember border-ember/20"
-                          : "bg-background/30 text-muted-foreground border-border/40 hover:bg-muted/25 hover:text-foreground"
-                      }`}
-                      aria-pressed={active}
-                    >
-                      {t}
-                    </button>
-                  );
-                })}
-              </div>
-              {topTech.length >= 3 && (
-                <p className="mt-2 text-[11px] text-muted-foreground">
-                  Max 3 selected. Unselect one to choose another.
-                </p>
-              )}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-      ) : null}
       <AuthDialog
         open={authGateOpen}
         onOpenChange={setAuthGateOpen}
@@ -1220,4 +482,121 @@ const Profile = () => {
   );
 };
 
-export default Profile;
+/* ──────────── Posts list (wired to the same Explore card) ──────────── */
+
+interface PostsListProps {
+  isPending: boolean;
+  isOwnProfile: boolean;
+  userPosts: FeedPost[];
+  openCommentsPostId: string | null;
+  commentsFetchPostId: string | null;
+  commentsForActivePost: PostComment[];
+  commentsLoadingActive: boolean;
+  commentDraft: string;
+  commentMutationPending: boolean;
+  commentMutationPostId?: string;
+  onToggleLike: (postId: string) => void;
+  onToggleComments: (postId: string) => void;
+  onChangeCommentDraft: (v: string) => void;
+  onSubmitComment: (postId: string) => void;
+  onOpenMediaLightbox: (postId: string) => void;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  onFetchNext: () => void;
+}
+
+const PostsList = ({
+  isPending,
+  isOwnProfile,
+  userPosts,
+  openCommentsPostId,
+  commentsFetchPostId,
+  commentsForActivePost,
+  commentsLoadingActive,
+  commentDraft,
+  commentMutationPending,
+  commentMutationPostId,
+  onToggleLike,
+  onToggleComments,
+  onChangeCommentDraft,
+  onSubmitComment,
+  onOpenMediaLightbox,
+  hasNextPage,
+  isFetchingNextPage,
+  onFetchNext,
+}: PostsListProps) => {
+  if (isPending) {
+    return (
+      <div className="rounded-[18px] border border-ink-line bg-ink-2 p-8 flex items-center justify-center gap-2 font-mono-jb text-[13px] text-muted-ink">
+        <span className="w-4 h-4 rounded-full border-2 border-cream/20 border-t-orange animate-spin" />
+        Loading posts…
+      </div>
+    );
+  }
+
+  if (!userPosts || userPosts.length === 0) {
+    return (
+      <div className="rounded-[18px] border border-dashed border-cream/15 bg-cream/[0.03] p-10 text-center">
+        <Doodle.Sparkle
+          size={28}
+          className="text-orange mx-auto mb-3 opacity-70"
+        />
+        <p className="font-grot font-extrabold text-[16px] text-cream mb-1">
+          No posts yet
+        </p>
+        <p className="font-mono-jb text-[12px] text-muted-ink">
+          {isOwnProfile
+            ? "Head to Explore to share your first update."
+            : "This builder hasn't posted anything yet."}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="rounded-[18px] border border-ink-line bg-ink-2 overflow-hidden">
+        {userPosts.map((post, i) => (
+          <ExplorePostCard
+            key={post.id}
+            post={post}
+            index={i}
+            isCommentsOpen={openCommentsPostId === post.id}
+            comments={
+              openCommentsPostId === post.id &&
+              commentsFetchPostId === post.id
+                ? commentsForActivePost
+                : []
+            }
+            commentsLoading={
+              openCommentsPostId === post.id && commentsLoadingActive
+            }
+            commentDraft={commentDraft}
+            commentSubmitting={
+              commentMutationPending && commentMutationPostId === post.id
+            }
+            onToggleLike={() => onToggleLike(post.id)}
+            onToggleComments={() => onToggleComments(post.id)}
+            onChangeCommentDraft={onChangeCommentDraft}
+            onSubmitComment={() => onSubmitComment(post.id)}
+            onOpenMediaLightbox={() => onOpenMediaLightbox(post.id)}
+          />
+        ))}
+      </div>
+      {hasNextPage && (
+        <div className="mt-5 flex justify-center">
+          <button
+            type="button"
+            disabled={isFetchingNextPage}
+            onClick={onFetchNext}
+            className="rounded-full border border-dashed border-cream/25 text-cream font-mono-jb font-bold text-[12px] px-6 py-2.5 hover:border-cream/45 transition-colors disabled:opacity-50"
+          >
+            {isFetchingNextPage ? "loading…" : "load more posts ↓"}
+          </button>
+        </div>
+      )}
+    </>
+  );
+};
+
+export default ProfilePageContent;

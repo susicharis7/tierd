@@ -56,6 +56,26 @@
     --sidebar-accent-foreground: 30 10% 90%;
     --sidebar-border: 15 4% 16%;
     --sidebar-ring: 15 95% 50%;
+
+    /* --- Studio Notebook palette (Tierd. redesign) ------------------ */
+    /* Brand-fixed colors. Referenced via tailwind.config -> theme.colors. */
+    --ink: 30 24% 7%;          /* #15110D — warm near-black canvas */
+    --ink-2: 30 25% 9%;        /* #1E1812 — card surface on dark */
+    --ink-3: 30 27% 13%;       /* #2A2118 — nested card */
+    --ink-line: 30 26% 18%;    /* #3A2E22 — dividers on dark */
+    --cream: 40 39% 91%;       /* #F1EBDF — sticker cards, primary on dark */
+    --cream-2: 39 33% 86%;     /* #E8E0D1 — deeper cream */
+    --cream-3: 39 28% 79%;     /* #D9CFBC — cream border */
+    --orange: 16 100% 56%;     /* #FF5A1F — primary accent / CTAs */
+    --orange-2: 17 100% 64%;   /* #FF7B45 — hover */
+    --orange-soft: 21 100% 79%;/* #FFB892 — tinted orange surface */
+    --peach: 23 94% 88%;       /* #FDD9C2 — soft accent */
+    --forest: 142 36% 27%;     /* #2D5F3F — live / verified / success */
+    --sage: 137 20% 72%;       /* #A8C5B0 — calm accent */
+    --tape: 48 87% 66%;        /* #F4D75E — masking tape, warning */
+    --plum: 334 30% 32%;       /* #6B3A4F — deep accent */
+    --muted-ink: 36 11% 49%;   /* #8A7F6E — muted text on dark */
+    --muted-cream: 36 14% 38%; /* #6E6353 — muted text on cream */
   }
 }
 
@@ -145,4 +165,38 @@
   .text-balance {
     text-wrap: balance;
   }
+}
+
+.tierd-scrollbar-x {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--orange) / 0.7) hsl(var(--ink-3) / 0.9);
+}
+
+.tierd-scrollbar-x::-webkit-scrollbar {
+  height: 10px;
+}
+
+.tierd-scrollbar-x::-webkit-scrollbar-track {
+  background: hsl(var(--ink-3) / 0.85);
+  border-radius: 999px;
+}
+
+.tierd-scrollbar-x::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--orange) / 0.75),
+    hsl(var(--orange-2) / 0.85)
+  );
+  border-radius: 999px;
+  border: 2px solid hsl(var(--ink-3) / 0.85);
+}
+
+/* Studio Notebook — blinking cursor for the composer's placeholder bar.
+   Honors prefers-reduced-motion (per §6 of the design handoff). */
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-blink { animation: none; }
 }

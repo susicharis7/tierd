@@ -15,6 +15,7 @@ export const rankingKeys = {
   profileEvaluation: (profileId: string | null) =>
     ["ranking", "profile-evaluation", profileId] as const,
   activeChallenge: () => ["ranking", "active-featured-challenge"] as const,
+  topChallengers: (limit: number) => ["ranking", "top-challengers", limit] as const,
 };
 
 export function useGlobalLeaderboardQuery(limit = 50) {
@@ -63,6 +64,14 @@ export function useActiveChallengeQuery() {
   return useQuery({
     queryKey: rankingKeys.activeChallenge(),
     queryFn: () => rankingService.getActiveFeaturedChallenge(),
+    staleTime: RANKING_STALE_MS,
+  });
+}
+
+export function useTopChallengersQuery(limit = 5) {
+  return useQuery({
+    queryKey: rankingKeys.topChallengers(limit),
+    queryFn: () => rankingService.getTopChallengers(limit),
     staleTime: RANKING_STALE_MS,
   });
 }

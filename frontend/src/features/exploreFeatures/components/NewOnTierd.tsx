@@ -1,14 +1,14 @@
-﻿import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Sparkles } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar";
+
+import { Doodle, MonoCaption, UserAvatar } from "../../../components/tierd";
 import {
   authorDisplayName,
   authorHandleStr,
-  authorInitial,
 } from "../exploreAuthorDisplay";
 import type { ExploreProfile } from "../exploreTypes";
 import { EmptyUsers, SkeletonProfileCard } from "./ExploreFeedStates";
+
+const CARD_TILTS = [-1, 1, -0.5, 0.8, -1.2];
 
 export function NewOnTierd({
   profiles,
@@ -17,83 +17,67 @@ export function NewOnTierd({
   profiles: ExploreProfile[];
   loading: boolean;
 }) {
-  if (loading) {
-    return (
-      <section className="mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <Sparkles size={14} className="text-ember" />
-          <h2 className="font-display text-xs font-bold text-muted-foreground/70 uppercase tracking-[0.15em]">
-            New on Tierd<span className="text-ember">.</span>
-          </h2>
-        </div>
-        <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-thin">
-          {Array.from({ length: 6 }).map((_, i) => (
+  return (
+    <section>
+      <Header />
+
+      {loading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {Array.from({ length: 5 }).map((_, i) => (
             <SkeletonProfileCard key={i} />
           ))}
         </div>
-      </section>
-    );
-  }
-
-  if (profiles.length === 0) {
-    return (
-      <section className="mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <Sparkles size={14} className="text-ember" />
-          <h2 className="font-display text-xs font-bold text-muted-foreground/70 uppercase tracking-[0.15em]">
-            New on Tierd<span className="text-ember">.</span>
-          </h2>
-        </div>
+      ) : profiles.length === 0 ? (
         <EmptyUsers />
-      </section>
-    );
-  }
-
-  return (
-    <section className="mb-6">
-      <div className="flex items-center justify-between gap-2 mb-3">
-        <div className="flex items-center gap-2">
-          <Sparkles size={14} className="text-ember" />
-          <h2 className="font-display text-xs font-bold text-muted-foreground/70 uppercase tracking-[0.15em]">
-            New on Tierd<span className="text-ember">.</span>
-          </h2>
-        </div>
-        <span className="text-xs text-muted-foreground/45 uppercase tracking-wider">
-          Recently joined
-        </span>
-      </div>
-      <div className="-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-2 scrollbar-thin">
-        {profiles.slice(0, 12).map((p, i) => (
-          <motion.div
-            key={p.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.035 }}
-          >
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {profiles.slice(0, 5).map((p, i) => (
             <Link
+              key={p.id}
               to={`/profile/${p.username ?? p.id}`}
-              className="group flex min-w-[7.5rem] flex-col items-center gap-2 rounded-xl border border-border/30 bg-muted/5 p-3.5 text-center transition-all hover:border-ember/20 hover:bg-muted/10"
+              className="relative rounded-[14px] bg-cream/[0.04] border border-cream/[0.08] p-4 hover:border-cream/20 transition-colors group block"
+              style={{ transform: `rotate(${CARD_TILTS[i % CARD_TILTS.length]}deg)` }}
             >
-              <Avatar className="h-10 w-10 ring-1 ring-border/30 group-hover:ring-ember/30 transition-all">
-                {p.avatar_url && (
-                  <AvatarImage src={p.avatar_url} alt={authorDisplayName(p)} />
-                )}
-                <AvatarFallback className="bg-ember/10 text-ember font-display font-bold text-xs">
-                  {authorInitial(p)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 w-full">
-                <p className="font-display font-semibold text-xs text-foreground truncate">
-                  {authorDisplayName(p)}
-                </p>
-                <p className="text-xs text-muted-foreground/55 truncate">
-                  {authorHandleStr(p.username)}
-                </p>
-              </div>
+              <UserAvatar
+                name={authorDisplayName(p)}
+                src={p.avatar_url}
+                size={44}
+                className="mb-2.5"
+              />
+              <p className="font-grot font-bold text-[13px] text-cream leading-[1.2] truncate">
+                {authorDisplayName(p)}
+              </p>
+              <p className="font-mono-jb text-[9px] uppercase tracking-[0.1em] text-muted-ink mt-1 truncate">
+                {authorHandleStr(p.username)}
+              </p>
+              <button
+                type="button"
+                className="mt-2.5 w-full rounded-lg border border-dashed border-cream/30 font-mono-jb font-bold text-[10px] text-cream py-1.5 group-hover:border-cream/50 transition-colors"
+                onClick={(e) => e.preventDefault()}
+              >
+                + follow
+              </button>
             </Link>
-          </motion.div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </section>
+  );
+}
+
+function Header() {
+  return (
+    <div className="flex items-center justify-between gap-2 mb-3.5">
+      <div className="flex items-center gap-2.5">
+        <Doodle.Sparkle size={16} className="text-orange" />
+        <MonoCaption tone="cream">
+          NEW ON TIERD<span className="text-orange">.</span>
+        </MonoCaption>
+        <Doodle.ArrowSquiggle w={50} h={18} className="text-orange" />
+      </div>
+      <MonoCaption tone="cream" className="text-[9px] hidden sm:inline-flex">
+        RECENTLY JOINED — SCROLL →
+      </MonoCaption>
+    </div>
   );
 }

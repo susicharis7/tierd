@@ -1,10 +1,11 @@
-﻿import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, LogOut, UserCog } from "lucide-react";
+
 import AuthDialog from "./AuthDialog";
 import { useAuth } from "../features/authFeatures/AuthProvider";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Doodle, TierdLogo, UserAvatar } from "./tierd";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,13 +14,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { cn } from "../lib/utils";
 
 const navItems = [
   { label: "Explore", href: "/explore" },
   { label: "Leaderboard", href: "/leaderboard" },
   { label: "Challenges", href: "/challenges" },
   { label: "Get Verified", href: "/get-verified" },
-];
+] as const;
 
 type AuthMode = "login" | "signup";
 
@@ -35,7 +37,7 @@ const Navbar = () => {
 
   const profileSlug = profile?.username?.trim() || userId || null;
   const profileHref = profileSlug ? `/profile/${profileSlug}` : "/profile/me";
-  const profilesNavActive = location.pathname.startsWith("/profile");
+  const profilesActive = location.pathname.startsWith("/profile");
 
   const openAuth = (mode: AuthMode) => {
     setAuthMode(mode);
@@ -48,85 +50,133 @@ const Navbar = () => {
     navigate("/");
   };
 
-  const avatarInitial = (() => {
-    const source = profile?.full_name || profile?.username || "U";
-    return source.charAt(0).toUpperCase();
-  })();
+  const displayName =
+    profile?.full_name?.trim() || profile?.username || "Account";
+  const handleLabel = profile?.username ? `@${profile.username}` : null;
 
-  const displayName = profile?.full_name?.trim() || profile?.username || "Account";
-
-  const navLinkClass = (active: boolean) =>
-    `px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
-      active ? "text-foreground bg-muted/50" : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
-    }`;
+  const isActive = (href: string) =>
+    href === "/" ? location.pathname === "/" : location.pathname.startsWith(href);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 glass-nav">
-      <div className="section-container flex items-center justify-between h-16">
-        <Link to="/" className="font-display font-bold text-xl tracking-tight text-foreground">
-          Tierd<span className="text-ember">.</span>
-        </Link>
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-ink/85 backdrop-blur-xl border-b border-dashed border-cream/[0.12]">
+      <div className="section-container flex items-center justify-between gap-4 py-4 sm:py-[18px]">
+        {/* Logo — wordmark on >=sm, compact "t." mark on phones */}
+        <div className="shrink-0 flex items-center">
+          <div className="hidden sm:flex">
+            <TierdLogo size="md" tone="cream" beta />
+          </div>
+          <div className="flex sm:hidden">
+            <TierdLogo variant="mark" size="md" bg="ink-2" />
+          </div>
+        </div>
 
-        {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-1">
-          {navItems.map((item) => (
-            <Link
-              key={item.label}
-              to={item.href}
-              className={navLinkClass(location.pathname === item.href)}
-            >
-              {item.label}
-            </Link>
-          ))}
+        {/* Centered pill nav (desktop) */}
+        <div className="hidden md:flex items-center gap-1 rounded-full bg-cream/[0.04] border border-cream/[0.08] p-[5px]">
+          {navItems.map((item) => {
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.label}
+                to={item.href}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-4 py-2 font-mono-jb text-[13px] font-medium transition-colors",
+                  active
+                    ? "bg-cream text-ink"
+                    : "text-cream/70 hover:text-cream",
+                )}
+              >
+                {active && (
+                  <span className="w-[5px] h-[5px] rounded-full bg-orange" />
+                )}
+                {item.label}
+              </Link>
+            );
+          })}
           {isLoggedIn ? (
-            <Link to={profileHref} className={navLinkClass(profilesNavActive)}>
+            <Link
+              to={profileHref}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-4 py-2 font-mono-jb text-[13px] font-medium transition-colors",
+                profilesActive
+                  ? "bg-cream text-ink"
+                  : "text-cream/70 hover:text-cream",
+              )}
+            >
+              {profilesActive && (
+                <span className="w-[5px] h-[5px] rounded-full bg-orange" />
+              )}
               Profiles
             </Link>
           ) : (
             <button
               type="button"
               onClick={() => openAuth("login")}
-              className={navLinkClass(profilesNavActive)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-4 py-2 font-mono-jb text-[13px] font-medium transition-colors",
+                profilesActive
+                  ? "bg-cream text-ink"
+                  : "text-cream/70 hover:text-cream",
+              )}
             >
               Profiles
             </button>
           )}
         </div>
 
-        {/* Desktop right side */}
+        {/* Right cluster */}
         <div className="hidden md:flex items-center gap-3">
+          <button
+            type="button"
+            aria-label="Search"
+            className="inline-flex items-center gap-2 rounded-full border border-cream/15 px-2.5 py-[7px] font-mono-jb text-[12px] text-cream hover:border-cream/30 transition-colors"
+          >
+            <Doodle.Search size={13} className="text-cream" />
+            <span className="opacity-50">⌘K</span>
+          </button>
+
           {!loading && isLoggedIn ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 rounded-full px-2 py-1 hover:bg-muted/30 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  <Avatar className="h-8 w-8">
-                    {profile?.avatar_url && (
-                      <AvatarImage src={profile.avatar_url} alt={displayName} />
+                <button className="flex items-center gap-2.5 rounded-full px-1 py-1 hover:bg-cream/[0.04] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange">
+                  <UserAvatar
+                    name={displayName}
+                    src={profile?.avatar_url}
+                    size={36}
+                  />
+                  <div className="leading-tight text-left max-w-[160px]">
+                    <div className="font-grot font-bold text-[14px] text-cream truncate">
+                      {displayName}
+                    </div>
+                    {handleLabel && (
+                      <div className="font-mono-jb text-[9px] uppercase tracking-[0.1em] text-muted-ink mt-px truncate">
+                        {handleLabel}
+                      </div>
                     )}
-                    <AvatarFallback className="bg-ember/15 text-ember font-display font-bold text-xs">
-                      {avatarInitial}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium text-foreground max-w-[120px] truncate">
-                    {displayName}
-                  </span>
+                  </div>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel className="font-display text-xs text-muted-foreground">
-                  {profile?.username ? `@${profile.username}` : "Your account"}
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuLabel className="font-mono-jb text-[10px] uppercase tracking-[0.1em] text-muted-ink">
+                  {handleLabel ?? "Your account"}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  className="cursor-pointer gap-2"
+                  className="cursor-pointer gap-2 font-grot text-[13px]"
                   onClick={() => navigate(profileHref)}
                 >
                   <UserCog size={14} />
-                  Edit profile
+                  My Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="cursor-pointer gap-2 font-grot text-[13px]"
+                  onClick={() => navigate("/security")}
+                >
+                  <Doodle.Pulse size={14} className="text-orange" />
+                  Security
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  className="cursor-pointer gap-2 text-destructive focus:text-destructive"
+                  className="cursor-pointer gap-2 font-grot text-[13px] text-destructive focus:text-destructive"
                   onClick={handleLogout}
                 >
                   <LogOut size={14} />
@@ -137,16 +187,18 @@ const Navbar = () => {
           ) : !loading ? (
             <>
               <button
+                type="button"
                 onClick={() => openAuth("login")}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-4 py-2"
+                className="font-mono-jb text-[12px] font-bold text-cream/70 hover:text-cream transition-colors px-3 py-2"
               >
-                Log in
+                log in
               </button>
               <button
+                type="button"
                 onClick={() => openAuth("signup")}
-                className="btn-primary text-xs px-5 py-2"
+                className="inline-flex items-center gap-1.5 rounded-full bg-orange text-cream font-mono-jb text-[12px] font-bold px-4 py-2 shadow-cta-orange hover:translate-y-px transition-transform"
               >
-                Sign up
+                sign up
               </button>
             </>
           ) : null}
@@ -155,7 +207,8 @@ const Navbar = () => {
         {/* Mobile toggle */}
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="md:hidden text-foreground p-2"
+          className="md:hidden text-cream p-2"
+          aria-label="Toggle menu"
         >
           {mobileOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
@@ -168,82 +221,119 @@ const Navbar = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden glass-nav border-t border-border overflow-hidden"
+            className="md:hidden bg-ink border-t border-dashed border-cream/[0.12] overflow-hidden"
           >
-            <div className="section-container py-4 flex flex-col gap-2">
-              {navItems.map((item) => (
-                <Link
-                  key={item.label}
-                  to={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground rounded-md hover:bg-muted/30 transition-colors"
-                >
-                  {item.label}
-                </Link>
-              ))}
+            <div className="section-container py-5 flex flex-col gap-1.5">
+              {navItems.map((item) => {
+                const active = isActive(item.href);
+                return (
+                  <Link
+                    key={item.label}
+                    to={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={cn(
+                      "inline-flex items-center gap-2 rounded-full px-4 py-3 font-mono-jb text-[13px] font-medium transition-colors",
+                      active
+                        ? "bg-cream text-ink"
+                        : "text-cream/70 hover:text-cream",
+                    )}
+                  >
+                    {active && (
+                      <span className="w-[5px] h-[5px] rounded-full bg-orange" />
+                    )}
+                    {item.label}
+                  </Link>
+                );
+              })}
               {isLoggedIn ? (
                 <Link
                   to={profileHref}
                   onClick={() => setMobileOpen(false)}
-                  className={`px-4 py-3 text-sm font-medium rounded-md transition-colors ${
-                    profilesNavActive
-                      ? "text-foreground bg-muted/50"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                  }`}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-full px-4 py-3 font-mono-jb text-[13px] font-medium transition-colors",
+                    profilesActive
+                      ? "bg-cream text-ink"
+                      : "text-cream/70 hover:text-cream",
+                  )}
                 >
+                  {profilesActive && (
+                    <span className="w-[5px] h-[5px] rounded-full bg-orange" />
+                  )}
                   Profiles
                 </Link>
               ) : (
                 <button
                   type="button"
                   onClick={() => openAuth("login")}
-                  className={`w-full text-left px-4 py-3 text-sm font-medium rounded-md transition-colors ${
-                    profilesNavActive
-                      ? "text-foreground bg-muted/50"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                  }`}
+                  className={cn(
+                    "text-left inline-flex items-center gap-2 rounded-full px-4 py-3 font-mono-jb text-[13px] font-medium transition-colors",
+                    profilesActive
+                      ? "bg-cream text-ink"
+                      : "text-cream/70 hover:text-cream",
+                  )}
                 >
                   Profiles
                 </button>
               )}
-              <div className="border-t border-border mt-2 pt-4 flex flex-col gap-2">
+
+              <div className="border-t border-dashed border-cream/[0.12] mt-3 pt-4 flex flex-col gap-2">
                 {isLoggedIn ? (
                   <>
                     <Link
                       to={profileHref}
                       onClick={() => setMobileOpen(false)}
-                      className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground rounded-md hover:bg-muted/30 transition-colors"
+                      className="flex items-center gap-3 px-2 py-2"
                     >
-                      <Avatar className="h-6 w-6">
-                        {profile?.avatar_url && (
-                          <AvatarImage src={profile.avatar_url} alt={displayName} />
+                      <UserAvatar
+                        name={displayName}
+                        src={profile?.avatar_url}
+                        size={32}
+                      />
+                      <div className="leading-tight">
+                        <div className="font-grot font-bold text-[14px] text-cream">
+                          {displayName}
+                        </div>
+                        {handleLabel && (
+                          <div className="font-mono-jb text-[9px] uppercase tracking-[0.1em] text-muted-ink mt-px">
+                            {handleLabel}
+                          </div>
                         )}
-                        <AvatarFallback className="bg-ember/15 text-ember font-display font-bold text-[10px]">
-                          {avatarInitial}
-                        </AvatarFallback>
-                      </Avatar>
-                      {displayName}
+                      </div>
                     </Link>
                     <button
-                      onClick={() => { setMobileOpen(false); handleLogout(); }}
-                      className="text-sm font-medium text-destructive hover:text-destructive/80 px-4 py-2 text-left"
+                      onClick={() => {
+                        setMobileOpen(false);
+                        navigate("/security");
+                      }}
+                      className="font-mono-jb text-[12px] font-bold text-cream/70 hover:text-cream px-4 py-2 text-left"
                     >
-                      Log out
+                      security
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMobileOpen(false);
+                        handleLogout();
+                      }}
+                      className="font-mono-jb text-[12px] font-bold text-destructive hover:text-destructive/80 px-4 py-2 text-left"
+                    >
+                      log out
                     </button>
                   </>
                 ) : (
                   <>
                     <button
+                      type="button"
                       onClick={() => openAuth("login")}
-                      className="text-sm font-medium text-muted-foreground hover:text-foreground px-4 py-2 text-left"
+                      className="font-mono-jb text-[12px] font-bold text-cream/70 hover:text-cream px-4 py-2 text-left"
                     >
-                      Log in
+                      log in
                     </button>
                     <button
+                      type="button"
                       onClick={() => openAuth("signup")}
-                      className="btn-primary text-xs"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-full bg-orange text-cream font-mono-jb text-[13px] font-bold px-4 py-3 shadow-cta-orange"
                     >
-                      Sign up
+                      sign up
                     </button>
                   </>
                 )}
@@ -263,5 +353,3 @@ const Navbar = () => {
 };
 
 export default Navbar;
-
-

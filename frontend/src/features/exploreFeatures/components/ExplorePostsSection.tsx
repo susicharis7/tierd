@@ -43,7 +43,7 @@ export function ExplorePostsSection({
   isFetchingNextPage,
 }: ExplorePostsSectionProps) {
   return (
-    <div className="rounded-2xl border border-border/20 bg-muted/3 overflow-hidden">
+    <div className="rounded-[18px] border border-ink-line bg-ink-2 overflow-hidden">
       {postsLoading ? (
         <>
           {Array.from({ length: 3 }).map((_, i) => (
@@ -82,9 +82,9 @@ export function ExplorePostsSection({
           ))}
           <div ref={loadMoreSentinelRef} className="h-1 w-full shrink-0" aria-hidden />
           {isFetchingNextPage && (
-            <div className="flex justify-center border-t border-border/15 py-5">
+            <div className="flex justify-center border-t border-dashed border-ink-line py-5">
               <div
-                className="h-5 w-5 animate-spin rounded-full border-2 border-ember/30 border-t-ember"
+                className="h-5 w-5 animate-spin rounded-full border-2 border-cream/20 border-t-orange"
                 role="status"
                 aria-label="Loading more posts"
               />

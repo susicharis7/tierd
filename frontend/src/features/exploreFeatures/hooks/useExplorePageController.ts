@@ -10,6 +10,7 @@ import {
   useExploreDeleteCommentMutation,
   useExploreDeletePostMutation,
   useExploreCreatePostMutation,
+  useExploreUpdatePostMutation,
 } from "../useExplorePageData";
 import { getExploreActionableMessage } from "../exploreErrors";
 import { toast } from "../../../components/ui/sonner";
@@ -50,6 +51,7 @@ export function useExplorePageController() {
   const commentMutation = useExploreAddCommentMutation(userId, currentProfile);
   const deleteCommentMutation = useExploreDeleteCommentMutation(userId);
   const deletePostMutation = useExploreDeletePostMutation(userId);
+  const updatePostMutation = useExploreUpdatePostMutation(userId);
   const createPostMutation = useExploreCreatePostMutation(userId);
 
   const profiles = profilesQuery.data ?? [];
@@ -148,6 +150,14 @@ export function useExplorePageController() {
     deletePostMutation.mutate({ postId });
   };
 
+  const handleEditPost = async (postId: string, content: string) => {
+    if (!userId) {
+      toast("Log in to manage posts.");
+      return;
+    }
+    await updatePostMutation.mutateAsync({ postId, content });
+  };
+
   const handleComposerImageSelect = (file: File) => {
     setComposerImageFile(file);
     const url = URL.createObjectURL(file);
@@ -207,6 +217,7 @@ export function useExplorePageController() {
     commentMutation,
     deleteCommentMutation,
     deletePostMutation,
+    updatePostMutation,
     createPostMutation,
     composerContent,
     setComposerContent,
@@ -220,6 +231,7 @@ export function useExplorePageController() {
     handleSubmitComment,
     handleDeleteComment,
     handleDeletePost,
+    handleEditPost,
     setLightboxPostId,
   };
 }

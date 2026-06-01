@@ -389,6 +389,32 @@ export async function deletePost(params: {
   await tryRemoveFeedImageByPublicUrl((row.image_url as string | null) ?? null);
 }
 
+export async function updatePost(params: {
+  userId: string;
+  postId: string;
+  content: string;
+}): Promise<void> {
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase is not configured.");
+  }
+
+  const trimmed = params.content.trim();
+  if (!trimmed) {
+    throw new Error("Post content cannot be empty.");
+  }
+  if (trimmed.length > 4000) {
+    throw new Error("Post content is too long.");
+  }
+
+  const { error } = await supabase
+    .from("posts")
+    .update({ content: trimmed })
+    .eq("id", params.postId)
+    .eq("user_id", params.userId);
+
+  if (error) throw error;
+}
+
 export async function fetchUserLikedPostIds(params: {
   userId: string;
   postIds: string[];

@@ -20,12 +20,14 @@ import {
   fetchUserPostsWithLikes,
   searchProfiles,
   toggleLikePost,
+  updatePost,
 } from "./explore";
 import {
   isUserPostsQueryKey,
   patchCommentCountInInfinitePosts,
   patchLikeInInfinitePosts,
   patchRemovePostInInfinitePosts,
+  patchUpdatePostContentInInfinitePosts,
   type PostsInfiniteData,
 } from "./exploreQueryCachePatches";
 import { getExploreActionableMessage } from "./exploreErrors";
@@ -208,6 +210,19 @@ type DeletePostVars = {
 };
 
 type DeletePostCtx = {
+  prevFeed: ExploreFeedInfiniteData | undefined;
+  prevUserPosts: Array<{
+    queryKey: readonly unknown[];
+    data: UserPostsInfiniteData | undefined;
+  }>;
+};
+
+type UpdatePostVars = {
+  postId: string;
+  content: string;
+};
+
+type UpdatePostCtx = {
   prevFeed: ExploreFeedInfiniteData | undefined;
   prevUserPosts: Array<{
     queryKey: readonly unknown[];
@@ -473,6 +488,67 @@ export function useExploreDeletePostMutation(userId: string | null) {
       });
       void queryClient.invalidateQueries({
         queryKey: exploreKeys.comments(vars.postId),
+      });
+      void invalidateRankingQueries(queryClient);
+    },
+  });
+}
+
+export function useExploreUpdatePostMutation(userId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, UpdatePostVars, UpdatePostCtx | undefined>({
+    mutationFn: async ({ postId, content }: UpdatePostVars) => {
+      if (!userId) throw new Error("Not signed in");
+      await updatePost({ userId, postId, content });
+    },
+    onMutate: async ({ postId, content }) => {
+      if (!userId) return undefined;
+
+      await queryClient.cancelQueries({ queryKey: exploreKeys.feed(userId) });
+      await queryClient.cancelQueries({
+        predicate: (q) => isUserPostsQueryKey(q.queryKey),
+      });
+
+      const prevFeed = queryClient.getQueryData<ExploreFeedInfiniteData>(
+        exploreKeys.feed(userId),
+      );
+      const prevUserPosts = queryClient
+        .getQueryCache()
+        .findAll({ predicate: (q) => isUserPostsQueryKey(q.queryKey) })
+        .map((q) => ({
+          queryKey: q.queryKey as readonly unknown[],
+          data: queryClient.getQueryData<UserPostsInfiniteData>(q.queryKey),
+        }));
+
+      queryClient.setQueryData<ExploreFeedInfiniteData>(
+        exploreKeys.feed(userId),
+        (old) => patchUpdatePostContentInInfinitePosts(old, postId, content.trim()),
+      );
+      queryClient.setQueriesData<UserPostsInfiniteData>(
+        { predicate: (q) => isUserPostsQueryKey(q.queryKey) },
+        (old) => patchUpdatePostContentInInfinitePosts(old, postId, content.trim()),
+      );
+
+      return { prevFeed, prevUserPosts };
+    },
+    onError: (err, _vars, ctx) => {
+      if (!ctx) return;
+      if (userId && ctx.prevFeed !== undefined) {
+        queryClient.setQueryData(exploreKeys.feed(userId), ctx.prevFeed);
+      }
+      for (const { queryKey, data } of ctx.prevUserPosts) {
+        queryClient.setQueryData(queryKey, data);
+      }
+      const msg = err instanceof Error ? err.message : "Failed to update post.";
+      toast(getExploreActionableMessage(err) ?? msg);
+    },
+    onSettled: () => {
+      if (userId) {
+        void queryClient.invalidateQueries({ queryKey: exploreKeys.feed(userId) });
+      }
+      void queryClient.invalidateQueries({
+        predicate: (q) => isUserPostsQueryKey(q.queryKey),
       });
       void invalidateRankingQueries(queryClient);
     },

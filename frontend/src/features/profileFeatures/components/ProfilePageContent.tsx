@@ -18,6 +18,7 @@ import {
   useExploreDeletePostMutation,
   useExploreLikeMutation,
   useProfileByUsernameQuery,
+  useExploreUpdatePostMutation,
   useUserPostsInfiniteQuery,
 } from "../../exploreFeatures/useExplorePageData";
 import type { FeedPost, PostComment } from "../../exploreFeatures/exploreTypes";
@@ -130,6 +131,7 @@ const ProfilePageContent = () => {
   const commentMutation = useExploreAddCommentMutation(authUserId, authProfile);
   const deleteCommentMutation = useExploreDeleteCommentMutation(authUserId);
   const deletePostMutation = useExploreDeletePostMutation(authUserId);
+  const updatePostMutation = useExploreUpdatePostMutation(authUserId);
 
   const commentsForActivePost = commentsFetchPostId
     ? (commentsQuery.data ?? [])
@@ -201,6 +203,14 @@ const ProfilePageContent = () => {
       setCommentDraft("");
     }
     deletePostMutation.mutate({ postId });
+  };
+
+  const handleEditPost = async (postId: string, content: string) => {
+    if (!authUserId) {
+      toast("Log in to manage posts.");
+      return;
+    }
+    await updatePostMutation.mutateAsync({ postId, content });
   };
 
   /* UI toggles */
@@ -393,12 +403,14 @@ const ProfilePageContent = () => {
                   currentUserId={authUserId}
                   deletingCommentId={deleteCommentMutation.variables?.commentId}
                   deletingPostId={deletePostMutation.variables?.postId}
+                  updatingPostId={updatePostMutation.variables?.postId}
                   onToggleLike={handleToggleLike}
                   onToggleComments={handleToggleComments}
                   onChangeCommentDraft={setCommentDraft}
                   onSubmitComment={handleSubmitComment}
                   onDeleteComment={handleDeleteComment}
                   onDeletePost={handleDeletePost}
+                  onEditPost={handleEditPost}
                   onOpenMediaLightbox={handleOpenMediaLightbox}
                   hasNextPage={Boolean(userPostsQuery.hasNextPage)}
                   isFetchingNextPage={userPostsQuery.isFetchingNextPage}
@@ -540,12 +552,14 @@ interface PostsListProps {
   currentUserId: string | null;
   deletingCommentId?: string;
   deletingPostId?: string;
+  updatingPostId?: string;
   onToggleLike: (postId: string) => void;
   onToggleComments: (postId: string) => void;
   onChangeCommentDraft: (v: string) => void;
   onSubmitComment: (postId: string) => void;
   onDeleteComment: (postId: string, commentId: string) => void;
   onDeletePost: (postId: string) => void;
+  onEditPost: (postId: string, content: string) => Promise<void>;
   onOpenMediaLightbox: (postId: string) => void;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
@@ -566,12 +580,14 @@ const PostsList = ({
   currentUserId,
   deletingCommentId,
   deletingPostId,
+  updatingPostId,
   onToggleLike,
   onToggleComments,
   onChangeCommentDraft,
   onSubmitComment,
   onDeleteComment,
   onDeletePost,
+  onEditPost,
   onOpenMediaLightbox,
   hasNextPage,
   isFetchingNextPage,
@@ -630,12 +646,14 @@ const PostsList = ({
             currentUserId={currentUserId}
             deletingCommentId={deletingCommentId}
             deletingPost={deletingPostId === post.id}
+            updatingPost={updatingPostId === post.id}
             onToggleLike={() => onToggleLike(post.id)}
             onToggleComments={() => onToggleComments(post.id)}
             onChangeCommentDraft={onChangeCommentDraft}
             onSubmitComment={() => onSubmitComment(post.id)}
             onDeleteComment={(commentId) => onDeleteComment(post.id, commentId)}
             onDeletePost={() => onDeletePost(post.id)}
+            onEditPost={(content) => onEditPost(post.id, content)}
             onOpenMediaLightbox={() => onOpenMediaLightbox(post.id)}
           />
         ))}

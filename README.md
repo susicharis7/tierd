@@ -70,3 +70,4 @@ Run Supabase migrations from `supabase/` in order (`001` -> `035`).
 ## Explore Setup
 
 If feed/search/storage is misconfigured, follow: [docs/EXPLORE_SETUP.md](docs/EXPLORE_SETUP.md)
+You can also check out all the screenshots of the application: [docs/screenshots](docs/screenshots/)

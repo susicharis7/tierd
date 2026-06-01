@@ -11,6 +11,11 @@ type ExploreLightboxProps = {
   onCommentDraftChange: FeedImageLightboxProps["onCommentDraftChange"];
   onSubmitComment: FeedImageLightboxProps["onSubmitComment"];
   commentSubmitting: FeedImageLightboxProps["commentSubmitting"];
+  currentUserId: FeedImageLightboxProps["currentUserId"];
+  deletingCommentId: FeedImageLightboxProps["deletingCommentId"];
+  deletingPost: FeedImageLightboxProps["deletingPost"];
+  onDeleteComment: FeedImageLightboxProps["onDeleteComment"];
+  onDeletePost: FeedImageLightboxProps["onDeletePost"];
   onToggleLike: FeedImageLightboxProps["onToggleLike"];
   onClose: () => void;
 };
@@ -23,6 +28,11 @@ export function ExploreLightbox({
   onCommentDraftChange,
   onSubmitComment,
   commentSubmitting,
+  currentUserId,
+  deletingCommentId,
+  deletingPost,
+  onDeleteComment,
+  onDeletePost,
   onToggleLike,
   onClose,
 }: ExploreLightboxProps) {
@@ -39,6 +49,11 @@ export function ExploreLightbox({
       onCommentDraftChange={onCommentDraftChange}
       onSubmitComment={onSubmitComment}
       commentSubmitting={commentSubmitting}
+      currentUserId={currentUserId}
+      deletingCommentId={deletingCommentId}
+      deletingPost={deletingPost}
+      onDeleteComment={onDeleteComment}
+      onDeletePost={onDeletePost}
       onToggleLike={onToggleLike}
     />
   );

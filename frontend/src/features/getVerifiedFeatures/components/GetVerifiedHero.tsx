@@ -1,10 +1,20 @@
-﻿import {
+import {
   Doodle,
   ScribbleUnderline,
   StickerBadge,
 } from "../../../components/tierd";
 
-const GetVerifiedHero = () => {
+interface GetVerifiedHeroProps {
+  onStartEvaluation: () => void;
+  startDisabled: boolean;
+  startLabel?: string;
+}
+
+const GetVerifiedHero = ({
+  onStartEvaluation,
+  startDisabled,
+  startLabel = "start evaluation",
+}: GetVerifiedHeroProps) => {
   return (
     <section className="relative pt-32 pb-16">
       <Doodle.Shield
@@ -14,7 +24,12 @@ const GetVerifiedHero = () => {
       />
 
       <div className="section-container relative text-center max-w-[880px] mx-auto">
-        <StickerBadge color="orange" tilt={-1.5} icon={<Doodle.Shield size={11} />} className="mb-7">
+        <StickerBadge
+          color="orange"
+          tilt={-1.5}
+          icon={<Doodle.Shield size={11} />}
+          className="mb-7"
+        >
           Developer Evaluation v2
         </StickerBadge>
 
@@ -22,7 +37,10 @@ const GetVerifiedHero = () => {
           get
           <span className="relative inline-block ml-4 sm:ml-6 lg:ml-7 text-orange">
             verified
-            <ScribbleUnderline w={420} className="absolute left-0 -bottom-2 text-orange w-full max-w-full" />
+            <ScribbleUnderline
+              w={420}
+              className="absolute left-0 -bottom-2 text-orange w-full max-w-full"
+            />
           </span>
         </h1>
 
@@ -39,11 +57,15 @@ const GetVerifiedHero = () => {
         <div className="flex flex-wrap justify-center gap-3.5 mt-8">
           <button
             type="button"
-            className="inline-flex items-center gap-2.5 rounded-full bg-orange text-cream font-mono-jb text-[14px] font-bold px-7 py-3.5 shadow-cta-orange hover:translate-y-px transition-transform"
+            onClick={onStartEvaluation}
+            disabled={startDisabled}
+            className="inline-flex items-center gap-2.5 rounded-full bg-orange text-cream font-mono-jb text-[14px] font-bold px-7 py-3.5 shadow-cta-orange hover:translate-y-px transition-transform disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
           >
             <Doodle.Bolt size={14} />
-            start evaluation
-            <span className="rounded-md bg-black/20 text-[10px] font-bold px-1.5 py-0.5 ml-1">~4 min</span>
+            {startLabel}
+            <span className="rounded-md bg-black/20 text-[10px] font-bold px-1.5 py-0.5 ml-1">
+              ~4 min
+            </span>
           </button>
           <a
             href="#how-it-works"

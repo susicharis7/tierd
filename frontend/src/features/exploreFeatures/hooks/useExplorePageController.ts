@@ -7,7 +7,10 @@ import {
   useExploreCommentsQuery,
   useExploreLikeMutation,
   useExploreAddCommentMutation,
+  useExploreDeleteCommentMutation,
+  useExploreDeletePostMutation,
   useExploreCreatePostMutation,
+  useExploreUpdatePostMutation,
 } from "../useExplorePageData";
 import { getExploreActionableMessage } from "../exploreErrors";
 import { toast } from "../../../components/ui/sonner";
@@ -46,6 +49,9 @@ export function useExplorePageController() {
 
   const likeMutation = useExploreLikeMutation(userId);
   const commentMutation = useExploreAddCommentMutation(userId, currentProfile);
+  const deleteCommentMutation = useExploreDeleteCommentMutation(userId);
+  const deletePostMutation = useExploreDeletePostMutation(userId);
+  const updatePostMutation = useExploreUpdatePostMutation(userId);
   const createPostMutation = useExploreCreatePostMutation(userId);
 
   const profiles = profilesQuery.data ?? [];
@@ -119,6 +125,39 @@ export function useExplorePageController() {
     );
   };
 
+  const handleDeleteComment = (postId: string, commentId: string) => {
+    if (!userId) {
+      toast("Log in to manage comments.");
+      return;
+    }
+
+    deleteCommentMutation.mutate({ postId, commentId });
+  };
+
+  const handleDeletePost = (postId: string) => {
+    if (!userId) {
+      toast("Log in to manage posts.");
+      return;
+    }
+    if (openCommentsPostId === postId) {
+      setOpenCommentsPostId(null);
+      setCommentDraft("");
+    }
+    if (lightboxPostId === postId) {
+      setLightboxPostId(null);
+      setCommentDraft("");
+    }
+    deletePostMutation.mutate({ postId });
+  };
+
+  const handleEditPost = async (postId: string, content: string) => {
+    if (!userId) {
+      toast("Log in to manage posts.");
+      return;
+    }
+    await updatePostMutation.mutateAsync({ postId, content });
+  };
+
   const handleComposerImageSelect = (file: File) => {
     setComposerImageFile(file);
     const url = URL.createObjectURL(file);
@@ -176,6 +215,9 @@ export function useExplorePageController() {
     loadMoreSentinelRef,
     isFetchingNextPage,
     commentMutation,
+    deleteCommentMutation,
+    deletePostMutation,
+    updatePostMutation,
     createPostMutation,
     composerContent,
     setComposerContent,
@@ -187,6 +229,9 @@ export function useExplorePageController() {
     handleToggleLike,
     handleToggleComments,
     handleSubmitComment,
+    handleDeleteComment,
+    handleDeletePost,
+    handleEditPost,
     setLightboxPostId,
   };
 }

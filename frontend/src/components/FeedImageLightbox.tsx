@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Heart, MessageSquare, X } from "lucide-react";
+import { Heart, MessageSquare, Trash2, X } from "lucide-react";
 
 import {
   Dialog,
@@ -52,6 +52,11 @@ export interface FeedImageLightboxProps {
   onCommentDraftChange: (v: string) => void;
   onSubmitComment: () => void;
   commentSubmitting: boolean;
+  currentUserId: string | null;
+  deletingCommentId?: string;
+  deletingPost?: boolean;
+  onDeleteComment: (commentId: string) => void;
+  onDeletePost: () => void;
   onToggleLike: () => void;
 }
 
@@ -65,6 +70,11 @@ export default function FeedImageLightbox({
   onCommentDraftChange,
   onSubmitComment,
   commentSubmitting,
+  currentUserId,
+  deletingCommentId,
+  deletingPost,
+  onDeleteComment,
+  onDeletePost,
   onToggleLike,
 }: FeedImageLightboxProps) {
   const liked = !!post.liked_by_me;
@@ -77,6 +87,7 @@ export default function FeedImageLightbox({
     : post.content;
   const authorName = displayName(post.author);
   const profilePath = `/profile/${post.author.username ?? post.author.id}`;
+  const canDeletePost = Boolean(currentUserId && post.author.id === currentUserId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -188,6 +199,18 @@ export default function FeedImageLightbox({
                   {handleStr(post.author.username)}
                 </p>
               </div>
+              {canDeletePost && (
+                <button
+                  type="button"
+                  onClick={onDeletePost}
+                  disabled={deletingPost}
+                  className="inline-flex items-center gap-1 rounded-full border border-cream/20 px-2 py-1 text-[10px] font-mono-jb text-cream/75 hover:border-orange hover:text-orange disabled:opacity-50"
+                  aria-label="Delete post"
+                >
+                  <Trash2 size={10} />
+                  {deletingPost ? "..." : "delete post"}
+                </button>
+              )}
             </div>
 
             {/* Body */}
@@ -247,7 +270,13 @@ export default function FeedImageLightbox({
               ) : (
                 <ul className="space-y-4">
                   {comments.map((c) => (
-                    <CommentRow key={c.id} comment={c} />
+                    <CommentRow
+                      key={c.id}
+                      comment={c}
+                      canDelete={Boolean(currentUserId && c.author.id === currentUserId)}
+                      deleting={deletingCommentId === c.id}
+                      onDelete={() => onDeleteComment(c.id)}
+                    />
                   ))}
                 </ul>
               )}
@@ -283,7 +312,17 @@ export default function FeedImageLightbox({
   );
 }
 
-function CommentRow({ comment: c }: { comment: PostComment }) {
+function CommentRow({
+  comment: c,
+  canDelete,
+  deleting,
+  onDelete,
+}: {
+  comment: PostComment;
+  canDelete: boolean;
+  deleting: boolean;
+  onDelete: () => void;
+}) {
   const name = c.author.full_name?.trim() || c.author.username || "Anonymous";
   return (
     <li className="flex gap-3">
@@ -302,6 +341,18 @@ function CommentRow({ comment: c }: { comment: PostComment }) {
           <span className="font-mono-jb text-[10px] text-muted-ink">
             {timeAgo(c.created_at)}
           </span>
+          {canDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={deleting}
+              className="ml-auto inline-flex items-center gap-1 rounded-full border border-cream/20 px-2 py-1 text-[10px] font-mono-jb text-cream/75 hover:border-orange hover:text-orange disabled:opacity-50"
+              aria-label="Delete comment"
+            >
+              <Trash2 size={10} />
+              {deleting ? "..." : "delete"}
+            </button>
+          )}
         </div>
         <p className="mt-1 whitespace-pre-line font-grot text-[14px] text-cream/85 leading-[1.5]">
           {c.content}

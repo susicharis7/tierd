@@ -44,6 +44,7 @@ const LeaderboardPageContent = () => {
     [developers, userId],
   );
   const pointsBehindFirst = currentUser && developers[0] ? developers[0].score - currentUser.score : null;
+  const needsEvaluation = Boolean(currentUser && !currentUser.hasCompletedEvaluation);
 
   return (
     <div className="min-h-screen bg-ink text-cream font-grot relative">
@@ -90,7 +91,11 @@ const LeaderboardPageContent = () => {
               </div>
               <div className="my-2.5 border-t border-dashed border-ink/15" />
               <div className="font-mono-jb text-[10px] text-muted-cream">
-                {pointsBehindFirst && pointsBehindFirst > 0 ? (
+                {needsEvaluation ? (
+                  <>
+                    <b className="text-orange">Unranked until evaluation.</b> Run Start Evaluation on Get Verified.
+                  </>
+                ) : pointsBehindFirst && pointsBehindFirst > 0 ? (
                   <>
                     <b className="text-orange">{pointsBehindFirst.toLocaleString()} pts</b> behind #1. keep shipping
                   </>

@@ -5,8 +5,10 @@ export const exploreKeys = {
 
   profiles: () => [...exploreKeys.all, "profiles"] as const,
 
-  feed: (userId: string | null) =>
-    [...exploreKeys.all, "feed", userId ?? "anon"] as const,
+  feed: () => [...exploreKeys.all, "feed"] as const,
+
+  feedLikedPostIds: (userId: string, postIds: readonly string[]) =>
+    [...exploreKeys.all, "feedLikedPostIds", userId, postIds.join(",")] as const,
 
   comments: (postId: string) => [...exploreKeys.all, "comments", postId] as const,
 

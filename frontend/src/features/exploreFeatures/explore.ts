@@ -45,11 +45,55 @@ export async function fetchFeedPosts(params: {
   limit: number;
   /** ISO timestamp; fetch posts strictly older than this (exclusive). */
   cursor?: string;
+  signal?: AbortSignal;
 }): Promise<PaginatedResult<FeedPost>> {
-  const { limit, cursor } = params;
+  const { limit, cursor, signal } = params;
   if (!isSupabaseConfigured) {
     return { items: [], nextCursor: null };
   }
+
+  const { data: rpcData, error: rpcError } = await supabase
+    .rpc("fetch_explore_feed", {
+      feed_limit: limit,
+      before_created_at: cursor ?? null,
+    })
+    .abortSignal(signal);
+
+  if (!rpcError) {
+    const data = rpcData ?? [];
+    const items: FeedPost[] = data.map((row) => ({
+      id: row.id as string,
+      content: row.content as string,
+      image_url: row.image_url as string | null,
+      created_at: row.created_at as string,
+      like_count: (row.like_count as number) ?? 0,
+      comment_count: (row.comment_count as number) ?? 0,
+      liked_by_me: false,
+      author: {
+        id: (row.user_id as string) ?? "",
+        username: row.author_username as string | null,
+        full_name: row.author_full_name as string | null,
+        avatar_url: row.author_avatar_url as string | null,
+      },
+    }));
+
+    const nextCursor =
+      items.length === limit ? items[items.length - 1].created_at : null;
+
+    return { items, nextCursor };
+  }
+
+  logExploreDevError("fetchFeedPosts (fetch_explore_feed rpc)", rpcError);
+
+  return fetchFeedPostsViaView({ limit, cursor, signal });
+}
+
+async function fetchFeedPostsViaView(params: {
+  limit: number;
+  cursor?: string;
+  signal?: AbortSignal;
+}): Promise<PaginatedResult<FeedPost>> {
+  const { limit, cursor, signal } = params;
 
   let query = supabase
     .from("posts_with_counts")
@@ -69,7 +113,7 @@ export async function fetchFeedPosts(params: {
     query = query.lt("created_at", cursor);
   }
 
-  const { data, error } = await query;
+  const { data, error } = await query.abortSignal(signal);
 
   if (error) {
     console.error("[Explore] fetchFeedPosts error", error);
@@ -86,7 +130,8 @@ export async function fetchFeedPosts(params: {
   const { data: profiles, error: profileError } = await supabase
     .from("profiles")
     .select("id, username, full_name, avatar_url")
-    .in("id", userIds);
+    .in("id", userIds)
+    .abortSignal(signal);
 
   if (profileError) {
     console.error("[Explore] fetchFeedPosts profiles error", profileError);
@@ -112,6 +157,7 @@ export async function fetchFeedPosts(params: {
       created_at: row.created_at as string,
       like_count: (row.like_count as number) ?? 0,
       comment_count: (row.comment_count as number) ?? 0,
+      liked_by_me: false,
       author: {
         id: (row.user_id as string) ?? "",
         username: author?.username ?? null,
@@ -125,41 +171,6 @@ export async function fetchFeedPosts(params: {
     items.length === limit ? items[items.length - 1].created_at : null;
 
   return { items, nextCursor };
-}
-
-/** Feed posts with `liked_by_me` set when `userId` is provided (for TanStack Query cache). */
-export async function fetchExploreFeedWithLikes(
-  userId: string | null,
-  pageSize: number,
-  cursor?: string,
-): Promise<PaginatedResult<FeedPost>> {
-  const { items, nextCursor } = await fetchFeedPosts({
-    limit: pageSize,
-    cursor,
-  });
-  if (items.length === 0) {
-    return { items: [], nextCursor: null };
-  }
-
-  if (!userId) {
-    return {
-      items: items.map((p) => ({ ...p, liked_by_me: false })),
-      nextCursor,
-    };
-  }
-
-  const likedSet = await fetchUserLikedPostIds({
-    userId,
-    postIds: items.map((p) => p.id),
-  });
-
-  return {
-    items: items.map((p) => ({
-      ...p,
-      liked_by_me: likedSet.has(p.id),
-    })),
-    nextCursor,
-  };
 }
 
 /** Fetch posts by a single user (for profile pages). */
@@ -418,6 +429,7 @@ export async function updatePost(params: {
 export async function fetchUserLikedPostIds(params: {
   userId: string;
   postIds: string[];
+  signal?: AbortSignal;
 }): Promise<Set<string>> {
   if (!isSupabaseConfigured) return new Set();
   if (!params.userId || params.postIds.length === 0) return new Set();
@@ -426,7 +438,8 @@ export async function fetchUserLikedPostIds(params: {
     .from("post_likes")
     .select("post_id")
     .eq("user_id", params.userId)
-    .in("post_id", params.postIds);
+    .in("post_id", params.postIds)
+    .abortSignal(params.signal);
 
   if (error) {
     console.error("[Explore] fetchUserLikedPostIds error", error);

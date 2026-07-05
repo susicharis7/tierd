@@ -11,6 +11,11 @@ import {
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
+import {
+  InlineSpinner,
+  SkeletonAvatar,
+  SkeletonLine,
+} from "../../../components/ui/loading";
 import { toast } from "../../../components/ui/sonner";
 import { UserAvatar } from "../../../components/tierd";
 import { cn } from "../../../lib/utils";
@@ -225,9 +230,16 @@ export function EditProfileDialog({
           <button
             type="submit"
             disabled={saving}
-            className="w-full inline-flex items-center justify-center rounded-full bg-orange text-cream font-mono-jb font-bold text-[13px] px-5 py-2.5 shadow-cta-orange hover:translate-y-px transition-transform disabled:opacity-50"
+            className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-orange text-cream font-mono-jb font-bold text-[13px] px-5 py-2.5 shadow-cta-orange hover:translate-y-px transition-transform disabled:opacity-50"
           >
-            {saving ? "saving…" : "save changes"}
+            {saving ? (
+              <>
+                <InlineSpinner className="h-3.5 w-3.5 border-cream/30 border-t-cream" label="Saving profile" />
+                saving...
+              </>
+            ) : (
+              "save changes"
+            )}
           </button>
         </form>
       </DialogContent>
@@ -276,9 +288,20 @@ export function SocialListDialog({
         </DialogHeader>
         <div className="max-h-[55vh] overflow-y-auto space-y-2">
           {pending ? (
-            <p className="font-mono-jb text-[12px] text-muted-ink">
-              Loading…
-            </p>
+            <div className="space-y-2" aria-hidden="true">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-3 rounded-[12px] border border-cream/10 bg-cream/[0.04] px-3 py-2"
+                >
+                  <SkeletonAvatar className="h-9 w-9" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <SkeletonLine className="h-3.5 w-28" />
+                    <SkeletonLine className="h-2.5 w-20" />
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : items.length === 0 ? (
             <p className="font-mono-jb text-[12px] text-muted-ink">
               Nothing here yet.
@@ -374,4 +397,3 @@ export function TechDialog({
     </Dialog>
   );
 }
-

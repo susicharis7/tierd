@@ -2,6 +2,13 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { X } from "lucide-react";
 import { Doodle, MonoCaption } from "../../../components/tierd";
+import {
+  InlineSpinner,
+  SkeletonButton,
+  SkeletonLine,
+  SkeletonStatTile,
+} from "../../../components/ui/loading";
+import { useDelayedPending } from "../../../hooks/useDelayedPending";
 import { cn } from "../../../lib/utils";
 import {
   formatChallengeStartsIn,
@@ -17,6 +24,7 @@ interface ProfileSecondaryProps {
   followersCount: number;
   followingCount: number;
   currentScore: number;
+  statsLoading?: boolean;
   onOpenFollowers: () => void;
   onOpenFollowing: () => void;
   projects: ProjectRow[];
@@ -39,6 +47,7 @@ const ProfileSecondary = ({
   followersCount,
   followingCount,
   currentScore,
+  statsLoading = false,
   onOpenFollowers,
   onOpenFollowing,
   projects,
@@ -56,6 +65,7 @@ const ProfileSecondary = ({
         followersCount={followersCount}
         followingCount={followingCount}
         currentScore={currentScore}
+        loading={statsLoading}
         onOpenFollowers={onOpenFollowers}
         onOpenFollowing={onOpenFollowing}
       />
@@ -77,6 +87,7 @@ const ProfileSecondary = ({
 const ActiveChallengeCard = ({ userId }: { userId: string | null }) => {
   const query = useMyActiveChallengeQuery(userId);
   const challenge = query.data;
+  const showSkeleton = useDelayedPending(Boolean(userId) && query.isPending);
 
   const timer = challenge
     ? challenge.phase === "upcoming"
@@ -90,7 +101,13 @@ const ActiveChallengeCard = ({ userId }: { userId: string | null }) => {
         <Doodle.Bolt size={14} className="text-orange" />
         <MonoCaption tone="cream">// active challenge</MonoCaption>
       </div>
-      {challenge ? (
+      {showSkeleton ? (
+        <div className="space-y-3" aria-hidden="true">
+          <SkeletonLine className="h-5 w-56 max-w-full" />
+          <SkeletonLine className="h-3 w-28" />
+          <SkeletonButton className="h-7 w-28" />
+        </div>
+      ) : challenge ? (
         <>
           <p className="font-grot font-extrabold text-[20px] leading-tight text-cream">
             {challenge.title}
@@ -119,6 +136,7 @@ interface StatsRowProps {
   followersCount: number;
   followingCount: number;
   currentScore: number;
+  loading?: boolean;
   onOpenFollowers: () => void;
   onOpenFollowing: () => void;
 }
@@ -128,31 +146,43 @@ const StatsRow = ({
   followersCount,
   followingCount,
   currentScore,
+  loading = false,
   onOpenFollowers,
   onOpenFollowing,
 }: StatsRowProps) => (
   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-    <StatSticker label="posts" value={postsLabel} color="cream" tilt={-1.5} />
-    <StatSticker
-      label="following"
-      value={followingCount.toLocaleString()}
-      color="peach"
-      tilt={1}
-      onClick={onOpenFollowing}
-    />
-    <StatSticker
-      label="followers"
-      value={followersCount.toLocaleString()}
-      color="sage"
-      tilt={-1}
-      onClick={onOpenFollowers}
-    />
-    <StatSticker
-      label="score"
-      value={currentScore.toLocaleString()}
-      color="orange"
-      tilt={1.2}
-    />
+    {loading ? (
+      <>
+        <SkeletonStatTile tone="light" style={{ transform: "rotate(-1.5deg)" }} />
+        <SkeletonStatTile tone="light" className="bg-peach" style={{ transform: "rotate(1deg)" }} />
+        <SkeletonStatTile tone="light" className="bg-sage" style={{ transform: "rotate(-1deg)" }} />
+        <SkeletonStatTile tone="dark" className="bg-orange" style={{ transform: "rotate(1.2deg)" }} />
+      </>
+    ) : (
+      <>
+        <StatSticker label="posts" value={postsLabel} color="cream" tilt={-1.5} />
+        <StatSticker
+          label="following"
+          value={followingCount.toLocaleString()}
+          color="peach"
+          tilt={1}
+          onClick={onOpenFollowing}
+        />
+        <StatSticker
+          label="followers"
+          value={followersCount.toLocaleString()}
+          color="sage"
+          tilt={-1}
+          onClick={onOpenFollowers}
+        />
+        <StatSticker
+          label="score"
+          value={currentScore.toLocaleString()}
+          color="orange"
+          tilt={1.2}
+        />
+      </>
+    )}
   </div>
 );
 
@@ -272,6 +302,7 @@ const ProjectsSection = ({
   const [description, setDescription] = useState("");
   const [repoUrl, setRepoUrl] = useState("");
   const [liveUrl, setLiveUrl] = useState("");
+  const showProjectsSkeleton = useDelayedPending(projectsLoading && projects.length === 0);
 
   const submitAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -339,17 +370,42 @@ const ProjectsSection = ({
           <button
             type="submit"
             disabled={addingProject}
-            className="inline-flex items-center justify-center rounded-full bg-orange text-cream font-mono-jb font-bold text-[12px] px-4 py-2 disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-orange text-cream font-mono-jb font-bold text-[12px] px-4 py-2 disabled:opacity-60"
           >
-            {addingProject ? "saving..." : "submit project"}
+            {addingProject ? (
+              <>
+                <InlineSpinner className="h-3.5 w-3.5 border-cream/30 border-t-cream" label="Saving project" />
+                saving...
+              </>
+            ) : (
+              "submit project"
+            )}
           </button>
         </form>
       )}
 
-      {projectsLoading ? (
-        <div className="rounded-[14px] border border-ink-line bg-ink-2 p-4 font-mono-jb text-[12px] text-muted-ink">
-          loading projects...
+      {showProjectsSkeleton ? (
+        <div className="flex flex-col gap-2.5" aria-hidden="true">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div
+              key={i}
+              className="rounded-[14px] bg-ink-2 border border-ink-line p-4 sm:p-[18px] flex items-start gap-3"
+            >
+              <SkeletonButton className="h-11 w-11 rounded-[10px]" />
+              <div className="min-w-0 flex-1">
+                <SkeletonLine className="h-5 w-40" />
+                <SkeletonLine className="mt-3 h-3 w-full" />
+                <SkeletonLine className="mt-2 h-3 w-2/3" />
+                <div className="mt-4 flex gap-2">
+                  <SkeletonButton className="h-6 w-14" />
+                  <SkeletonButton className="h-6 w-14" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
+      ) : projectsLoading && projects.length === 0 ? (
+        <div className="min-h-[168px]" aria-hidden />
       ) : projects.length === 0 ? (
         <div className="rounded-[14px] border border-dashed border-cream/15 bg-cream/[0.03] p-6 text-center font-mono-jb text-[12px] text-muted-ink">
           no submitted projects yet.

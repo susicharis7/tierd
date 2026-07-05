@@ -1,5 +1,10 @@
 import { Link } from "react-router-dom";
 import { Doodle } from "../../../components/tierd";
+import {
+  InlineSpinner,
+  SkeletonButton,
+  SkeletonLine,
+} from "../../../components/ui/loading";
 import { cn } from "../../../lib/utils";
 import type { ChallengeOverviewRow } from "../../../repositories/challengeRepository";
 import {
@@ -128,9 +133,14 @@ const ChallengeCard = ({
             type="button"
             disabled={joinPending || isJoined || c.phase !== "active"}
             onClick={() => onJoin(c.id)}
-            className="rounded-lg bg-cream text-ink font-mono-jb text-[11px] font-bold px-3.5 py-1.5 hover:translate-y-px transition-transform disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-cream text-ink font-mono-jb text-[11px] font-bold px-3.5 py-1.5 hover:translate-y-px transition-transform disabled:opacity-50"
           >
-            {isJoined ? "joined" : c.phase === "active" ? "join" : "locked"}
+            {joinPending ? (
+              <>
+                <InlineSpinner tone="light" className="h-3 w-3" label="Joining challenge" />
+                joining
+              </>
+            ) : isJoined ? "joined" : c.phase === "active" ? "join" : "locked"}
           </button>
         </div>
       </div>
@@ -139,3 +149,41 @@ const ChallengeCard = ({
 };
 
 export default ChallengeCard;
+
+export function ChallengeCardSkeleton({ tilt }: { tilt: number }) {
+  return (
+    <div
+      className="relative rounded-[18px] bg-ink-2 border border-ink-line p-6 flex flex-col"
+      style={{ transform: `rotate(${tilt}deg)` }}
+      aria-hidden="true"
+    >
+      <SkeletonButton className="absolute top-4 right-4 h-7 w-7 rounded-lg" />
+      <div className="mb-4 flex gap-2">
+        <SkeletonButton className="h-6 w-16 rounded-md" />
+        <SkeletonButton className="h-6 w-20 rounded-md" />
+      </div>
+      <SkeletonLine className="mb-3 h-6 w-4/5" />
+      <div className="mb-5 min-h-[58px] space-y-2">
+        <SkeletonLine className="h-3 w-full" />
+        <SkeletonLine className="h-3 w-5/6" />
+        <SkeletonLine className="h-3 w-2/3" />
+      </div>
+      <div className="mb-4 flex flex-wrap gap-1.5">
+        <SkeletonButton className="h-6 w-20" />
+        <SkeletonButton className="h-6 w-16" />
+        <SkeletonButton className="h-6 w-20" />
+      </div>
+      <div className="mt-auto flex items-center justify-between gap-3 border-t border-dashed border-ink-line pt-3.5">
+        <div className="flex gap-3">
+          <SkeletonLine className="h-3 w-12" />
+          <SkeletonLine className="h-3 w-10" />
+          <SkeletonLine className="h-3 w-10" />
+        </div>
+        <div className="flex gap-2">
+          <SkeletonButton className="h-8 w-16 rounded-lg" />
+          <SkeletonButton className="h-8 w-14 rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
+}

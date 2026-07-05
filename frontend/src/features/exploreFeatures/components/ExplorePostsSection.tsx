@@ -1,4 +1,6 @@
 ﻿import type { ComponentProps, RefObject } from "react";
+import { InlineSpinner } from "../../../components/ui/loading";
+import { useDelayedPending } from "../../../hooks/useDelayedPending";
 import { ExplorePostCard } from "../ExplorePostCard";
 import { EmptyFeed, SkeletonCard } from "./ExploreFeedStates";
 
@@ -56,14 +58,21 @@ export function ExplorePostsSection({
   loadMoreSentinelRef,
   isFetchingNextPage,
 }: ExplorePostsSectionProps) {
+  const showPostsSkeleton = useDelayedPending(postsLoading && posts.length === 0);
+
   return (
-    <div className="rounded-[18px] border border-ink-line bg-ink-2 overflow-hidden">
-      {postsLoading ? (
+    <div
+      className="rounded-[18px] border border-ink-line bg-ink-2 overflow-hidden"
+      aria-busy={postsLoading || isFetchingNextPage}
+    >
+      {showPostsSkeleton ? (
         <>
           {Array.from({ length: 3 }).map((_, i) => (
             <SkeletonCard key={i} />
           ))}
         </>
+      ) : postsLoading && posts.length === 0 ? (
+        <div className="min-h-[260px]" aria-hidden />
       ) : posts.length === 0 ? (
         <EmptyFeed />
       ) : (
@@ -104,11 +113,7 @@ export function ExplorePostsSection({
           <div ref={loadMoreSentinelRef} className="h-1 w-full shrink-0" aria-hidden />
           {isFetchingNextPage && (
             <div className="flex justify-center border-t border-dashed border-ink-line py-5">
-              <div
-                className="h-5 w-5 animate-spin rounded-full border-2 border-cream/20 border-t-orange"
-                role="status"
-                aria-label="Loading more posts"
-              />
+              <InlineSpinner className="h-5 w-5" label="Loading more posts" />
             </div>
           )}
         </>
@@ -116,5 +121,4 @@ export function ExplorePostsSection({
     </div>
   );
 }
-
 

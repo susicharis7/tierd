@@ -1,4 +1,5 @@
 import { Doodle } from "../../../components/tierd";
+import { InlineSpinner } from "../../../components/ui/loading";
 
 type ExploreSearchBarProps = {
   searchQuery: string;
@@ -34,7 +35,7 @@ export function ExploreSearchBar({
             FILTERS
           </span>
           {searchLoading && (
-            <span className="w-4 h-4 rounded-full border-2 border-ink/30 border-t-orange animate-spin" />
+            <InlineSpinner tone="light" label="Searching" />
           )}
           <button
             type="button"

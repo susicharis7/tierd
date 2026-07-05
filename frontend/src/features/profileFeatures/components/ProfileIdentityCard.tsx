@@ -1,6 +1,12 @@
 ﻿import { Pencil, UserCheck, UserPlus } from "lucide-react";
 
 import { Doodle, UserAvatar } from "../../../components/tierd";
+import {
+  InlineSpinner,
+  SkeletonAvatar,
+  SkeletonButton,
+  SkeletonLine,
+} from "../../../components/ui/loading";
 import { cn } from "../../../lib/utils";
 import { mockMutuals } from "../profileData";
 
@@ -21,6 +27,7 @@ interface ProfileIdentityCardProps {
   onToggleFollow: () => void;
   isUnlocked: boolean;
   isVerifiedBadge: boolean;
+  loading?: boolean;
 }
 
 /**
@@ -43,7 +50,48 @@ const ProfileIdentityCard = ({
   onToggleFollow,
   isUnlocked,
   isVerifiedBadge,
+  loading = false,
 }: ProfileIdentityCardProps) => {
+  if (loading) {
+    return (
+      <div className="relative -mt-[50px] z-[2] flex flex-col sm:flex-row gap-5 sm:gap-7 px-2 sm:px-4" aria-hidden="true">
+        <div className="shrink-0 self-start">
+          <div className="relative w-[120px] h-[120px] sm:w-[140px] sm:h-[140px] rounded-[24px] bg-ink-2 p-1.5 border-[4px] border-ink shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
+            <SkeletonAvatar className="h-full w-full rounded-[18px]" />
+          </div>
+        </div>
+        <div className="flex-1 min-w-0 sm:pt-[60px]">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-3">
+                <SkeletonLine className="h-14 w-[min(360px,70vw)] rounded-xl" />
+                <SkeletonButton className="h-8 w-24 rounded-lg" />
+              </div>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <SkeletonLine className="h-3.5 w-24" />
+                <SkeletonLine className="h-3.5 w-36" />
+                <SkeletonLine className="h-3.5 w-28" />
+              </div>
+            </div>
+            <div className="flex gap-2.5">
+              <SkeletonButton className="h-10 w-24" />
+              <SkeletonButton className="h-10 w-20" />
+            </div>
+          </div>
+          <div className="mt-5 max-w-[720px] space-y-2">
+            <SkeletonLine className="h-4 w-full" />
+            <SkeletonLine className="h-4 w-4/5" />
+          </div>
+          <div className="mt-5 flex flex-wrap gap-4">
+            <SkeletonLine className="h-3 w-36" />
+            <SkeletonLine className="h-3 w-28" />
+            <SkeletonLine className="h-3 w-44" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative -mt-[50px] z-[2] flex flex-col sm:flex-row gap-5 sm:gap-7 px-2 sm:px-4">
       <div className="shrink-0 self-start">
@@ -122,7 +170,10 @@ const ProfileIdentityCard = ({
                   )}
                 >
                   {followPending ? (
-                    "updating..."
+                    <>
+                      <InlineSpinner className="h-3.5 w-3.5" label="Updating follow" />
+                      updating...
+                    </>
                   ) : isFollowing ? (
                     <>
                       <UserCheck size={13} /> following

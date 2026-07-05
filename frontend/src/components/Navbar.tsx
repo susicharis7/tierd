@@ -14,6 +14,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import {
+  SkeletonAvatar,
+  SkeletonButton,
+  SkeletonLine,
+} from "./ui/loading";
 import { cn } from "../lib/utils";
 
 const navItems = [
@@ -134,7 +139,15 @@ const Navbar = () => {
             <span className="opacity-50">⌘K</span>
           </button>
 
-          {!loading && isLoggedIn ? (
+          {loading ? (
+            <div className="flex items-center gap-2.5 rounded-full px-1 py-1" aria-hidden="true">
+              <SkeletonAvatar className="h-9 w-9" />
+              <div className="w-[120px] space-y-2">
+                <SkeletonLine className="h-3.5 w-24" />
+                <SkeletonLine className="h-2.5 w-16" />
+              </div>
+            </div>
+          ) : isLoggedIn ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2.5 rounded-full px-1 py-1 hover:bg-cream/[0.04] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange">
@@ -184,7 +197,7 @@ const Navbar = () => {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          ) : !loading ? (
+          ) : (
             <>
               <button
                 type="button"
@@ -201,7 +214,7 @@ const Navbar = () => {
                 sign up
               </button>
             </>
-          ) : null}
+          )}
         </div>
 
         {/* Mobile toggle */}
@@ -245,7 +258,11 @@ const Navbar = () => {
                   </Link>
                 );
               })}
-              {isLoggedIn ? (
+              {loading ? (
+                <div className="px-4 py-3" aria-hidden="true">
+                  <SkeletonLine className="h-4 w-24" />
+                </div>
+              ) : isLoggedIn ? (
                 <Link
                   to={profileHref}
                   onClick={() => setMobileOpen(false)}
@@ -277,7 +294,18 @@ const Navbar = () => {
               )}
 
               <div className="border-t border-dashed border-cream/[0.12] mt-3 pt-4 flex flex-col gap-2">
-                {isLoggedIn ? (
+                {loading ? (
+                  <div className="flex flex-col gap-3 px-2 py-2" aria-hidden="true">
+                    <div className="flex items-center gap-3">
+                      <SkeletonAvatar className="h-8 w-8" />
+                      <div className="space-y-2">
+                        <SkeletonLine className="h-3.5 w-28" />
+                        <SkeletonLine className="h-2.5 w-16" />
+                      </div>
+                    </div>
+                    <SkeletonButton className="h-9 w-full" />
+                  </div>
+                ) : isLoggedIn ? (
                   <>
                     <Link
                       to={profileHref}

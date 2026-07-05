@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 
 import { Doodle, MonoCaption, UserAvatar } from "../../../components/tierd";
+import { useDelayedPending } from "../../../hooks/useDelayedPending";
 import {
   authorDisplayName,
   authorHandleStr,
@@ -17,16 +18,20 @@ export function NewOnTierd({
   profiles: ExploreProfile[];
   loading: boolean;
 }) {
+  const showSkeleton = useDelayedPending(loading && profiles.length === 0);
+
   return (
-    <section>
+    <section aria-busy={loading}>
       <Header />
 
-      {loading ? (
+      {showSkeleton ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {Array.from({ length: 5 }).map((_, i) => (
             <SkeletonProfileCard key={i} />
           ))}
         </div>
+      ) : loading && profiles.length === 0 ? (
+        <div className="min-h-[136px]" aria-hidden />
       ) : profiles.length === 0 ? (
         <EmptyUsers />
       ) : (

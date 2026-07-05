@@ -2,6 +2,11 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 
 import { MonoCaption, UserAvatar } from "../../../components/tierd";
+import {
+  SkeletonAvatar,
+  SkeletonLine,
+} from "../../../components/ui/loading";
+import { useDelayedPending } from "../../../hooks/useDelayedPending";
 import { timeAgo } from "../../../lib/utils";
 import {
   authorDisplayName,
@@ -21,6 +26,7 @@ export function ExploreSearchResults({
   searchResults,
 }: ExploreSearchResultsProps) {
   const count = (searchResults ?? []).length;
+  const showSkeleton = useDelayedPending(searchLoading && !searchResults);
 
   return (
     <motion.div
@@ -34,7 +40,22 @@ export function ExploreSearchResults({
           : `${count} result${count !== 1 ? "s" : ""} for "${searchQuery}"`}
       </MonoCaption>
 
-      {searchResults && searchResults.length > 0 ? (
+      {showSkeleton ? (
+        <div className="grid sm:grid-cols-2 gap-3" aria-hidden="true">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-3 rounded-xl border border-dashed border-cream/15 bg-cream/[0.03] p-4"
+            >
+              <SkeletonAvatar className="h-10 w-10" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <SkeletonLine className="h-3.5 w-28" />
+                <SkeletonLine className="h-2.5 w-40 max-w-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : searchResults && searchResults.length > 0 ? (
         <div className="grid sm:grid-cols-2 gap-3">
           {searchResults.map((p, i) => (
             <motion.div

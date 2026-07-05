@@ -8,16 +8,21 @@ import {
   MonoCaption,
   StickerBadge,
 } from "../../../components/tierd";
+import {
+  SkeletonButton,
+  SkeletonLine,
+} from "../../../components/ui/loading";
 import { useAuth } from "../../authFeatures/AuthProvider";
 import { cn } from "../../../lib/utils";
 import { useActiveChallengeQuery } from "../../rankingFeatures/useRankingData";
+import { useDelayedPending } from "../../../hooks/useDelayedPending";
 import {
   useChallengesOverviewQuery,
   useJoinChallengeMutation,
   useMyActiveChallengeQuery,
 } from "../useChallengesData";
 import type { ChallengePhase } from "../../../repositories/challengeRepository";
-import ChallengeCard from "./ChallengeCard";
+import ChallengeCard, { ChallengeCardSkeleton } from "./ChallengeCard";
 import ChallengesHero from "./ChallengesHero";
 import FeaturedChallenge from "./FeaturedChallenge";
 import TopChallengersCard from "./TopChallengersCard";
@@ -44,7 +49,13 @@ const ChallengesPageContent = () => {
   const myActiveChallengeQuery = useMyActiveChallengeQuery(userId);
   const joinMutation = useJoinChallengeMutation(userId);
 
-  const rows = overviewQuery.data ?? [];
+  const rows = useMemo(() => overviewQuery.data ?? [], [overviewQuery.data]);
+  const showGridSkeleton = useDelayedPending(
+    overviewQuery.isPending && rows.length === 0,
+  );
+  const showMyChallengeSkeleton = useDelayedPending(
+    Boolean(userId) && myActiveChallengeQuery.isPending,
+  );
 
   const categories = useMemo(() => {
     const unique = new Set(rows.map((row) => row.category).filter(Boolean));
@@ -80,10 +91,16 @@ const ChallengesPageContent = () => {
         />
 
         <div id="challenges-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {overviewQuery.isPending && (
-            <div className="col-span-full rounded-[18px] border border-ink-line bg-ink-2 p-6 font-mono-jb text-[12px] text-muted-ink">
-              loading challenges...
-            </div>
+          {showGridSkeleton && (
+            <>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <ChallengeCardSkeleton key={i} tilt={CARD_TILTS[i % CARD_TILTS.length]} />
+              ))}
+            </>
+          )}
+
+          {overviewQuery.isPending && rows.length === 0 && !showGridSkeleton && (
+            <div className="col-span-full min-h-[260px]" aria-hidden />
           )}
 
           {!overviewQuery.isPending && filteredRows.length === 0 && (
@@ -93,7 +110,7 @@ const ChallengesPageContent = () => {
             </div>
           )}
 
-          {filteredRows.map((challenge, i) => (
+          {!showGridSkeleton && filteredRows.map((challenge, i) => (
             <ChallengeCard
               key={challenge.id}
               challenge={challenge}
@@ -114,7 +131,14 @@ const ChallengesPageContent = () => {
               <MonoCaption tone="cream">// YOUR CHALLENGE STATE</MonoCaption>
             </div>
             {userId ? (
-              myActiveChallengeQuery.data ? (
+              showMyChallengeSkeleton ? (
+                <div aria-hidden="true">
+                  <SkeletonLine className="h-5 w-56 max-w-full" />
+                  <SkeletonLine className="mt-3 h-3 w-full" />
+                  <SkeletonLine className="mt-2 h-3 w-4/5" />
+                  <SkeletonButton className="mt-4 h-9 w-32" />
+                </div>
+              ) : myActiveChallengeQuery.data ? (
                 <div>
                   <p className="font-grot font-extrabold text-[20px] text-cream leading-tight">
                     {myActiveChallengeQuery.data.title}

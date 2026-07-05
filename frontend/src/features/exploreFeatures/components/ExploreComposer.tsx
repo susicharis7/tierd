@@ -3,6 +3,12 @@ import { X, Image as ImageIcon } from "lucide-react";
 import { Doodle, Sticker, UserAvatar } from "../../../components/tierd";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
+import {
+  InlineSpinner,
+  SkeletonAvatar,
+  SkeletonButton,
+  SkeletonLine,
+} from "../../../components/ui/loading";
 import { toast } from "../../../components/ui/sonner";
 import { Textarea } from "../../../components/ui/textarea";
 
@@ -35,7 +41,27 @@ export function ExploreComposer({
   onComposerSubmit,
   createPostPending,
 }: ExploreComposerProps) {
-  if (authLoading) return null;
+  if (authLoading) {
+    return (
+      <Sticker color="cream" tilt={0.6} padding="lg" radius="lg">
+        <div className="flex items-start gap-3.5" aria-hidden="true">
+          <SkeletonAvatar tone="light" className="h-[42px] w-[42px]" />
+          <div className="min-w-0 flex-1">
+            <SkeletonLine tone="light" className="h-7 w-3/4 rounded-lg" />
+            <SkeletonLine tone="light" className="mt-3 h-7 w-1/2 rounded-lg" />
+            <SkeletonLine tone="light" className="mt-3 h-3 w-64 max-w-full" />
+            <div className="mt-4 flex items-center justify-between gap-3 border-t border-dashed border-ink/15 pt-4">
+              <div className="flex gap-2">
+                <SkeletonButton tone="light" className="h-7 w-16 rounded-lg" />
+                <SkeletonButton tone="light" className="h-7 w-16 rounded-lg" />
+              </div>
+              <SkeletonButton tone="light" className="h-10 w-24 rounded-[10px]" />
+            </div>
+          </div>
+        </div>
+      </Sticker>
+    );
+  }
 
   const composerName =
     currentProfile?.full_name?.trim() ||
@@ -115,8 +141,17 @@ export function ExploreComposer({
                 disabled={createPostPending || !composerContent.trim()}
                 className="inline-flex items-center gap-1.5 rounded-[10px] bg-orange text-cream font-mono-jb font-bold text-[13px] px-5 py-2.5 shadow-press hover:translate-y-px transition-transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               >
-                {createPostPending ? "posting…" : "ship it"}
-                <Doodle.Bolt size={12} className="text-cream" />
+                {createPostPending ? (
+                  <>
+                    <InlineSpinner className="h-3.5 w-3.5 border-cream/30 border-t-cream" label="Posting" />
+                    posting...
+                  </>
+                ) : (
+                  <>
+                    ship it
+                    <Doodle.Bolt size={12} className="text-cream" />
+                  </>
+                )}
               </button>
             </div>
 

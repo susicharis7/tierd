@@ -1,35 +1,15 @@
 import { Doodle } from "../../../components/tierd";
+import {
+  SkeletonFeedCard,
+  SkeletonProfileCard as SharedSkeletonProfileCard,
+} from "../../../components/ui/loading";
 
 export function SkeletonCard() {
-  return (
-    <div className="flex gap-3.5 px-6 py-6 animate-pulse">
-      <div className="shrink-0 pt-0.5">
-        <div className="h-10 w-10 rounded-full bg-cream/[0.08]" />
-      </div>
-      <div className="min-w-0 flex-1 space-y-3">
-        <div className="flex items-center gap-2">
-          <div className="h-3.5 w-28 rounded bg-cream/[0.08]" />
-          <div className="h-3 w-20 rounded bg-cream/[0.05]" />
-        </div>
-        <div className="space-y-2">
-          <div className="h-3.5 w-full rounded bg-cream/[0.05]" />
-          <div className="h-3.5 w-[85%] rounded bg-cream/[0.04]" />
-        </div>
-        <div className="h-48 w-full rounded-2xl bg-cream/[0.03]" />
-      </div>
-    </div>
-  );
+  return <SkeletonFeedCard />;
 }
 
 export function SkeletonProfileCard() {
-  return (
-    <div className="animate-pulse rounded-[14px] bg-cream/[0.04] border border-cream/[0.08] p-4">
-      <div className="w-11 h-11 rounded-full bg-cream/[0.1] mb-2.5" />
-      <div className="h-3 w-20 rounded bg-cream/[0.08]" />
-      <div className="h-2.5 w-14 rounded bg-cream/[0.05] mt-1.5" />
-      <div className="h-6 w-full rounded-lg bg-cream/[0.04] mt-2.5" />
-    </div>
-  );
+  return <SharedSkeletonProfileCard />;
 }
 
 export function EmptyUsers() {

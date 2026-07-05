@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Doodle, MonoCaption } from "../../../components/tierd";
+import { Skeleton } from "../../../components/ui/skeleton";
 import { cn } from "../../../lib/utils";
 import { useGithubActivity, type GithubActivityCell } from "../useGithubActivity";
 
@@ -271,7 +272,7 @@ export function GithubActivityPanel({
       </div>
 
       {loading && (
-        <div className="h-[110px] rounded-md bg-cream/[0.03] animate-pulse" />
+        <Skeleton className="h-[110px] rounded-md" />
       )}
 
       {!loading && !hasData && (

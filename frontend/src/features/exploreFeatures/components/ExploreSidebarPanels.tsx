@@ -7,7 +7,9 @@ import {
   Tape,
   UserAvatar,
 } from "../../../components/tierd";
+import { SkeletonLine } from "../../../components/ui/loading";
 import { toast } from "../../../components/ui/sonner";
+import { useDelayedPending } from "../../../hooks/useDelayedPending";
 import { cn } from "../../../lib/utils";
 import { useProfileProgressQuery } from "../../rankingFeatures/useRankingData";
 import { myCommunities, recentActivity } from "../constants/exploreUIData";
@@ -34,6 +36,7 @@ export function MiniProfileCard({
   // Falls back to graceful zeros while loading.
   const progressQuery = useProfileProgressQuery(userId);
   const progress = progressQuery.data;
+  const showStatsSkeleton = useDelayedPending(progressQuery.isPending);
 
   const name = profile?.full_name?.trim() || "Your Name";
   const handle = profile?.username?.trim()
@@ -68,19 +71,29 @@ export function MiniProfileCard({
       </div>
 
       <div className="grid grid-cols-3 gap-3 mb-4">
-        <StatCell
-          value={progress?.followingCount ?? 0}
-          label="following"
-        />
-        <StatCell
-          value={progress?.followersCount ?? 0}
-          label="followers"
-        />
-        <StatCell
-          value={progress?.totalScore ?? 0}
-          label="score"
-          accent
-        />
+        {showStatsSkeleton ? (
+          <>
+            <StatCellSkeleton />
+            <StatCellSkeleton />
+            <StatCellSkeleton />
+          </>
+        ) : (
+          <>
+            <StatCell
+              value={progress?.followingCount ?? 0}
+              label="following"
+            />
+            <StatCell
+              value={progress?.followersCount ?? 0}
+              label="followers"
+            />
+            <StatCell
+              value={progress?.totalScore ?? 0}
+              label="score"
+              accent
+            />
+          </>
+        )}
       </div>
 
       <div className="flex gap-2">
@@ -99,6 +112,15 @@ export function MiniProfileCard({
         </button>
       </div>
     </Sticker>
+  );
+}
+
+function StatCellSkeleton() {
+  return (
+    <div aria-hidden="true">
+      <SkeletonLine tone="light" className="h-5 w-10" />
+      <SkeletonLine tone="light" className="mt-2 h-2.5 w-14" />
+    </div>
   );
 }
 

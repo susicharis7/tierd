@@ -14,6 +14,7 @@ import {
   StickerBadge,
   Tape,
 } from "./tierd";
+import { InlineSpinner } from "./ui/loading";
 import { cn } from "../lib/utils";
 import { login, register, signInWithOAuthStrategy } from "../features/authFeatures/auth";
 import { authProviderStrategies } from "../strategies/auth";
@@ -274,7 +275,13 @@ const AuthDialog = ({
               className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-orange text-cream font-mono-jb font-bold text-[13px] px-5 py-3 shadow-cta-orange hover:translate-y-px transition-transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
             >
               {loading ? (
-                "please wait…"
+                <>
+                  <InlineSpinner
+                    className="h-3.5 w-3.5 border-cream/30 border-t-cream"
+                    label="Authenticating"
+                  />
+                  please wait...
+                </>
               ) : (
                 <>
                   <Doodle.Bolt size={13} className="text-cream" />

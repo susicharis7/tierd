@@ -8,6 +8,12 @@ import {
   Tape,
   UserAvatar,
 } from "./tierd";
+import {
+  SkeletonAvatar,
+  SkeletonButton,
+  SkeletonLine,
+} from "./ui/loading";
+import { useDelayedPending } from "../hooks/useDelayedPending";
 import { cn } from "../lib/utils";
 import {
   useActiveChallengeQuery,
@@ -78,6 +84,8 @@ const LiveSection = () => {
   const activeChallengeQuery = useActiveChallengeQuery();
   const risingDevs = risingQuery.data ?? [];
   const activeChallenge = activeChallengeQuery.data;
+  const showRisingSkeleton = useDelayedPending(risingQuery.isPending && risingDevs.length === 0);
+  const showChallengeSkeleton = useDelayedPending(activeChallengeQuery.isPending);
 
   return (
     <section className="relative py-24 border-t border-dashed border-cream/10 bg-cream/[0.02]">
@@ -174,13 +182,23 @@ const LiveSection = () => {
               <MonoCaption tone="muted" className="mb-3.5">
                 // rising builders
               </MonoCaption>
-              {risingQuery.isPending && (
-                <p className="font-mono-jb text-[12px] text-muted-cream">
-                  Loading rising data…
-                </p>
-              )}
               <div className="space-y-3">
-                {risingDevs.map((dev, i) => (
+                {showRisingSkeleton ? (
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3" aria-hidden="true">
+                      <SkeletonLine tone="light" className="h-5 w-5" />
+                      <SkeletonAvatar tone="light" className="h-8 w-8" />
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <SkeletonLine tone="light" className="h-3.5 w-24" />
+                        <SkeletonLine tone="light" className="h-2.5 w-16" />
+                      </div>
+                      <div className="space-y-2">
+                        <SkeletonLine tone="light" className="h-3.5 w-12" />
+                        <SkeletonLine tone="light" className="h-2.5 w-8" />
+                      </div>
+                    </div>
+                  ))
+                ) : risingDevs.map((dev, i) => (
                   <div
                     key={`${dev.profileId}-${dev.rank}`}
                     className="flex items-center gap-3"
@@ -222,28 +240,42 @@ const LiveSection = () => {
                   LIVE NOW
                 </StickerBadge>
               </div>
-              <h3 className="font-grot font-extrabold text-[18px] text-cream leading-tight mb-2">
-                {activeChallenge?.title ?? "No active challenge"}
-              </h3>
-              <p className="font-mono-jb text-[12px] text-muted-ink leading-[1.6] mb-4">
-                {activeChallenge?.description ??
-                  "Challenges will appear here when published and active."}
-              </p>
-              <div className="flex items-center justify-between text-[11px] mb-4">
-                <span className="font-mono-jb text-orange font-bold">
-                  +{activeChallenge?.rewardPoints ?? 0} PTS
-                </span>
-                <span className="font-mono-jb text-muted-ink">
-                  {activeChallenge
-                    ? `ends in ${formatTimeLeft(activeChallenge.endsAt)}`
-                    : "no timer"}
-                </span>
-              </div>
+              {showChallengeSkeleton ? (
+                <div className="mb-4 space-y-3" aria-hidden="true">
+                  <SkeletonLine className="h-5 w-48" />
+                  <SkeletonLine className="h-3 w-full" />
+                  <SkeletonLine className="h-3 w-4/5" />
+                  <div className="flex items-center justify-between">
+                    <SkeletonLine className="h-3 w-16" />
+                    <SkeletonLine className="h-3 w-20" />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h3 className="font-grot font-extrabold text-[18px] text-cream leading-tight mb-2">
+                    {activeChallenge?.title ?? "No active challenge"}
+                  </h3>
+                  <p className="font-mono-jb text-[12px] text-muted-ink leading-[1.6] mb-4">
+                    {activeChallenge?.description ??
+                      "Challenges will appear here when published and active."}
+                  </p>
+                  <div className="flex items-center justify-between text-[11px] mb-4">
+                    <span className="font-mono-jb text-orange font-bold">
+                      +{activeChallenge?.rewardPoints ?? 0} PTS
+                    </span>
+                    <span className="font-mono-jb text-muted-ink">
+                      {activeChallenge
+                        ? `ends in ${formatTimeLeft(activeChallenge.endsAt)}`
+                        : "no timer"}
+                    </span>
+                  </div>
+                </>
+              )}
               <Link
                 to="/challenges"
                 className="block w-full text-center rounded-full bg-cream text-ink font-mono-jb text-[12px] font-bold px-4 py-2.5 shadow-press hover:translate-y-px transition-transform"
               >
-                join challenge →
+                {showChallengeSkeleton ? <SkeletonButton tone="light" className="mx-auto h-4 w-28" /> : "join challenge →"}
               </Link>
             </div>
           </div>

@@ -5,6 +5,10 @@ import {
   Tape,
   MonoCaption,
 } from "../../../components/tierd";
+import {
+  SkeletonButton,
+  SkeletonLine,
+} from "../../../components/ui/loading";
 import type { ActiveChallenge } from "../../../services/rankingService";
 import { formatChallengeTimeLeft } from "../useChallengesData";
 
@@ -48,37 +52,67 @@ const FeaturedChallenge = ({ challenge, isPending }: FeaturedChallengeProps) => 
               </span>
             </div>
 
-            <h2 className="font-boldonse text-[36px] sm:text-[48px] lg:text-[56px] leading-[0.95] text-ink mb-4">
-              {isPending ? "Loading challenge..." : title}
-            </h2>
+            {isPending ? (
+              <div aria-hidden="true">
+                <SkeletonLine tone="light" className="mb-4 h-14 w-[min(520px,100%)] rounded-xl" />
+                <div className="mb-5 max-w-[560px] space-y-2">
+                  <SkeletonLine tone="light" className="h-3.5 w-full" />
+                  <SkeletonLine tone="light" className="h-3.5 w-4/5" />
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 pt-5 border-t-[1.5px] border-dashed border-ink/20">
+                  <StatBlockSkeleton />
+                  <StatBlockSkeleton />
+                  <StatBlockSkeleton />
+                </div>
+              </div>
+            ) : (
+              <>
+                <h2 className="font-boldonse text-[36px] sm:text-[48px] lg:text-[56px] leading-[0.95] text-ink mb-4">
+                  {title}
+                </h2>
 
-            <p className="font-mono-jb text-[13px] sm:text-[14px] text-muted-cream leading-[1.6] max-w-[560px] mb-5">
-              {description}
-            </p>
+                <p className="font-mono-jb text-[13px] sm:text-[14px] text-muted-cream leading-[1.6] max-w-[560px] mb-5">
+                  {description}
+                </p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 pt-5 border-t-[1.5px] border-dashed border-ink/20">
-              <StatBlock label="TIME LEFT" value={timer ?? "-"} />
-              <StatBlock label="POINTS" value={`+${reward}`} />
-              <StatBlock label="BUILDERS" value={`${participants}`} />
-            </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 pt-5 border-t-[1.5px] border-dashed border-ink/20">
+                  <StatBlock label="TIME LEFT" value={timer ?? "-"} />
+                  <StatBlock label="POINTS" value={`+${reward}`} />
+                  <StatBlock label="BUILDERS" value={`${participants}`} />
+                </div>
+              </>
+            )}
           </div>
 
           <div className="self-center rounded-[16px] bg-ink text-cream p-5">
             <MonoCaption tone="cream" className="text-[10px] opacity-70">
               // CHALLENGE DETAILS
             </MonoCaption>
-            <p className="font-grot font-extrabold text-[20px] leading-[1.2] mt-2">
-              Ready to ship?
-              <br />
-              <span className="text-orange">Join the challenge.</span>
-            </p>
+            {isPending ? (
+              <div className="mt-2" aria-hidden="true">
+                <SkeletonLine className="h-5 w-36" />
+                <SkeletonLine className="mt-2 h-5 w-44" />
+              </div>
+            ) : (
+              <p className="font-grot font-extrabold text-[20px] leading-[1.2] mt-2">
+                Ready to ship?
+                <br />
+                <span className="text-orange">Join the challenge.</span>
+              </p>
+            )}
 
             <Link
               to={challenge ? `/challenges/${challenge.id}` : "/challenges"}
               className="mt-4 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-orange text-cream font-mono-jb text-[14px] font-bold px-4 py-3.5 shadow-press hover:translate-y-px transition-transform"
             >
-              <Doodle.Bolt size={14} />
-              OPEN CHALLENGE
+              {isPending ? (
+                <SkeletonButton className="h-4 w-32 bg-cream/20" />
+              ) : (
+                <>
+                  <Doodle.Bolt size={14} />
+                  OPEN CHALLENGE
+                </>
+              )}
             </Link>
           </div>
         </div>
@@ -94,6 +128,15 @@ function StatBlock({ label, value }: { label: string; value: string }) {
         {label}
       </div>
       <div className="mt-1 font-boldonse text-[26px] text-ink">{value}</div>
+    </div>
+  );
+}
+
+function StatBlockSkeleton() {
+  return (
+    <div aria-hidden="true">
+      <SkeletonLine tone="light" className="h-3 w-20" />
+      <SkeletonLine tone="light" className="mt-2 h-7 w-24" />
     </div>
   );
 }

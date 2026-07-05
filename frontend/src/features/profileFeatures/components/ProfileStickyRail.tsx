@@ -1,4 +1,8 @@
 ﻿import { Doodle, MonoCaption, Tape, UserAvatar } from "../../../components/tierd";
+import {
+  SkeletonButton,
+  SkeletonLine,
+} from "../../../components/ui/loading";
 import { mapTierToBadge } from "../../rankingFeatures/tierMapping";
 import { TECH_OPTIONS, type TechOption } from "../profileData";
 import type { GithubLanguage } from "../useGithubLanguages";
@@ -20,6 +24,7 @@ interface ProfileStickyRailProps {
   profileId: string | null;
   isGithubLinked: boolean;
   githubLanguages?: GithubLanguage[];
+  progressLoading?: boolean;
 }
 
 const ProfileStickyRail = ({
@@ -38,6 +43,7 @@ const ProfileStickyRail = ({
   profileId,
   isGithubLinked,
   githubLanguages,
+  progressLoading = false,
 }: ProfileStickyRailProps) => {
   return (
     <div className="space-y-[18px]">
@@ -51,6 +57,7 @@ const ProfileStickyRail = ({
         weeklyScore={weeklyScore}
         globalPercentile={globalPercentile}
         hasCompletedEvaluation={hasCompletedEvaluation}
+        loading={progressLoading}
       />
       <GithubActivityPanel profileId={profileId} isOwnProfile={isOwnProfile} isLinked={isGithubLinked} compact />
       <TechStackCard topTech={topTech} onEditTech={onEditTech} isOwnProfile={isOwnProfile} githubLanguages={githubLanguages} />
@@ -69,6 +76,7 @@ interface TierCardProps {
   weeklyScore: number;
   globalPercentile: number;
   hasCompletedEvaluation: boolean;
+  loading?: boolean;
 }
 
 const TierCard = ({
@@ -81,7 +89,45 @@ const TierCard = ({
   weeklyScore,
   globalPercentile,
   hasCompletedEvaluation,
+  loading = false,
 }: TierCardProps) => {
+  if (loading) {
+    return (
+      <div
+        className="relative overflow-hidden rounded-[22px] bg-orange text-cream p-6 shadow-glow-orange"
+        style={{ transform: "rotate(-0.8deg)" }}
+        aria-hidden="true"
+      >
+        <Tape color="cream" size="md" tilt={5} className="top-[-10px] right-8" />
+        <SkeletonLine className="h-3 w-28 bg-cream/20" />
+        <div className="mt-4 flex items-baseline gap-4">
+          <SkeletonLine className="h-20 w-28 rounded-xl bg-cream/20" />
+          <div className="space-y-3 pb-3.5">
+            <SkeletonLine className="h-5 w-36 bg-cream/20" />
+            <SkeletonLine className="h-3 w-28 bg-cream/20" />
+          </div>
+        </div>
+        <div className="mt-5 border-t-[1.5px] border-dashed border-cream/30 pt-4">
+          <div className="mb-3 flex justify-between">
+            <SkeletonLine className="h-3 w-32 bg-cream/20" />
+            <SkeletonLine className="h-3 w-24 bg-cream/20" />
+          </div>
+          <SkeletonButton className="h-2.5 w-full bg-cream/20" />
+        </div>
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <div>
+            <SkeletonLine className="h-5 w-16 bg-cream/20" />
+            <SkeletonLine className="mt-2 h-2.5 w-20 bg-cream/20" />
+          </div>
+          <div>
+            <SkeletonLine className="h-5 w-20 bg-cream/20" />
+            <SkeletonLine className="mt-2 h-2.5 w-24 bg-cream/20" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const code = mapTierToBadge(tierCode);
   const nextTotal = currentScore + pointsToNextTier;
   const percentileLabel = `TOP ${Math.max(1, Math.round(globalPercentile))}%`;

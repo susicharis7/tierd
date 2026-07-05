@@ -7,7 +7,12 @@ import Navbar from "../../../components/Navbar";
 import AuthDialog from "../../../components/AuthDialog";
 import FeedImageLightbox from "../../../components/FeedImageLightbox";
 import { Doodle, MonoCaption } from "../../../components/tierd";
+import {
+  InlineSpinner,
+  SkeletonFeedCard,
+} from "../../../components/ui/loading";
 import { toast } from "../../../components/ui/sonner";
+import { useDelayedPending } from "../../../hooks/useDelayedPending";
 import { useAuth } from "../../authFeatures/AuthProvider";
 import { getExploreActionableMessage } from "../../exploreFeatures/exploreErrors";
 import { ExplorePostCard } from "../../exploreFeatures/ExplorePostCard";
@@ -226,6 +231,9 @@ const ProfilePageContent = () => {
   const followingQuery = useFollowingListQuery(resolvedUserId, followingOpen);
 
   const showGuestGate = !authLoading && !session;
+  const profileLoading =
+    (isOwnProfile && authLoading) ||
+    (!isOwnProfile && externalProfileQuery.isPending);
 
   const displayName =
     (authLoading && isOwnProfile)
@@ -345,6 +353,7 @@ const ProfilePageContent = () => {
             onToggleFollow={handleToggleFollow}
             isUnlocked={isProfileUnlocked}
             isVerifiedBadge={hasVerifiedBadge}
+            loading={profileLoading}
           />
         </motion.section>
 
@@ -359,6 +368,7 @@ const ProfilePageContent = () => {
                 followersCount={followersCount}
                 followingCount={followingCount}
                 currentScore={currentScore}
+                statsLoading={profileProgressQuery.isPending}
                 onOpenFollowers={() => setFollowersOpen(true)}
                 onOpenFollowing={() => setFollowingOpen(true)}
                 projects={projectsQuery.data ?? []}
@@ -439,6 +449,7 @@ const ProfilePageContent = () => {
                 profileId={resolvedUserId}
                 isGithubLinked={isGithubLinked}
                 githubLanguages={githubLanguages}
+                progressLoading={profileProgressQuery.isPending}
               />
             </aside>
           </div>
@@ -593,13 +604,23 @@ const PostsList = ({
   isFetchingNextPage,
   onFetchNext,
 }: PostsListProps) => {
-  if (isPending) {
+  const showPostsSkeleton = useDelayedPending(isPending && userPosts.length === 0);
+
+  if (showPostsSkeleton) {
     return (
-      <div className="rounded-[18px] border border-ink-line bg-ink-2 p-8 flex items-center justify-center gap-2 font-mono-jb text-[13px] text-muted-ink">
-        <span className="w-4 h-4 rounded-full border-2 border-cream/20 border-t-orange animate-spin" />
-        Loading posts…
+      <div
+        className="rounded-[18px] border border-ink-line bg-ink-2 overflow-hidden"
+        aria-busy="true"
+      >
+        {Array.from({ length: 3 }).map((_, i) => (
+          <SkeletonFeedCard key={i} />
+        ))}
       </div>
     );
+  }
+
+  if (isPending && userPosts.length === 0) {
+    return <div className="min-h-[260px]" aria-hidden />;
   }
 
   if (!userPosts || userPosts.length === 0) {
@@ -664,9 +685,16 @@ const PostsList = ({
             type="button"
             disabled={isFetchingNextPage}
             onClick={onFetchNext}
-            className="rounded-full border border-dashed border-cream/25 text-cream font-mono-jb font-bold text-[12px] px-6 py-2.5 hover:border-cream/45 transition-colors disabled:opacity-50"
+            className="inline-flex items-center rounded-full border border-dashed border-cream/25 text-cream font-mono-jb font-bold text-[12px] px-6 py-2.5 hover:border-cream/45 transition-colors disabled:opacity-50"
           >
-            {isFetchingNextPage ? "loading…" : "load more posts ↓"}
+            {isFetchingNextPage ? (
+              <>
+                <InlineSpinner className="mr-2 h-3.5 w-3.5" label="Loading more posts" />
+                loading...
+              </>
+            ) : (
+              "load more posts ↓"
+            )}
           </button>
         </div>
       )}

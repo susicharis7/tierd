@@ -10,6 +10,10 @@ import {
 } from "./ui/dialog";
 import { Doodle, MonoCaption, Tape, UserAvatar } from "./tierd";
 import { Textarea } from "./ui/textarea";
+import {
+  InlineSpinner,
+  SkeletonCommentRow,
+} from "./ui/loading";
 import { cn, timeAgo } from "../lib/utils";
 import type {
   FeedPost,
@@ -260,9 +264,11 @@ export default function FeedImageLightbox({
             <div className="mt-5 space-y-4">
               <MonoCaption tone="cream">// replies</MonoCaption>
               {commentsLoading ? (
-                <p className="font-mono-jb text-[12px] text-muted-ink">
-                  Loading comments…
-                </p>
+                <div className="space-y-4" aria-hidden="true">
+                  <SkeletonCommentRow />
+                  <SkeletonCommentRow />
+                  <SkeletonCommentRow />
+                </div>
               ) : comments.length === 0 ? (
                 <p className="font-mono-jb text-[12px] text-muted-ink">
                   No comments yet.
@@ -303,7 +309,14 @@ export default function FeedImageLightbox({
               disabled={!commentDraft.trim() || commentSubmitting}
               className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-full bg-orange text-cream font-mono-jb font-bold text-[13px] px-5 py-2.5 shadow-cta-orange hover:translate-y-px transition-transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
             >
-              {commentSubmitting ? "posting…" : "post comment"}
+              {commentSubmitting ? (
+                <>
+                  <InlineSpinner className="h-3.5 w-3.5" label="Posting comment" />
+                  posting...
+                </>
+              ) : (
+                "post comment"
+              )}
             </button>
           </form>
         </aside>

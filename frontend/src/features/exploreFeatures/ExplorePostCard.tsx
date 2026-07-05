@@ -5,6 +5,10 @@ import { Heart, MessageSquare, Image as ImageIcon, Pencil, Trash2 } from "lucide
 
 import { Doodle, UserAvatar } from "../../components/tierd";
 import { Textarea } from "../../components/ui/textarea";
+import {
+  InlineSpinner,
+  SkeletonCommentRow,
+} from "../../components/ui/loading";
 import { cn, timeAgo } from "../../lib/utils";
 import {
   authorDisplayName,
@@ -277,9 +281,10 @@ export function ExplorePostCard({
               <div className="mt-3 pt-3 border-t border-dashed border-ink-line space-y-0">
                 <div className="space-y-3.5">
                   {commentsLoading ? (
-                    <p className="font-mono-jb text-[12px] text-muted-ink py-2">
-                      Loading comments…
-                    </p>
+                    <div className="space-y-3.5 py-2" aria-hidden="true">
+                      <SkeletonCommentRow />
+                      <SkeletonCommentRow />
+                    </div>
                   ) : comments.length === 0 ? (
                     <p className="font-mono-jb text-[12px] text-muted-ink py-2">
                       No comments yet. Be the first to share feedback.
@@ -317,7 +322,11 @@ export function ExplorePostCard({
                     disabled={!commentDraft.trim() || commentSubmitting}
                     className="self-end shrink-0 inline-flex items-center gap-1.5 rounded-full bg-orange text-cream font-mono-jb font-bold text-[12px] px-4 py-2 shadow-cta-orange hover:translate-y-px transition-transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                   >
-                    {commentSubmitting ? "…" : "post"}
+                    {commentSubmitting ? (
+                      <InlineSpinner className="h-3.5 w-3.5" label="Posting comment" />
+                    ) : (
+                      "post"
+                    )}
                   </button>
                 </form>
               </div>

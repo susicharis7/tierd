@@ -9,12 +9,20 @@ import {
   Tape,
   UserAvatar,
 } from "./tierd";
+import {
+  SkeletonAvatar,
+  SkeletonLine,
+} from "./ui/loading";
+import { useDelayedPending } from "../hooks/useDelayedPending";
 import { cn } from "../lib/utils";
 import { useLandingTopBuildersQuery } from "../features/rankingFeatures/useRankingData";
 
 const HeroSection = () => {
   const topBuildersQuery = useLandingTopBuildersQuery(5);
   const builders = topBuildersQuery.data ?? [];
+  const showTopBuildersSkeleton = useDelayedPending(
+    topBuildersQuery.isPending && builders.length === 0,
+  );
 
   return (
     <section className="relative pt-28 sm:pt-32 pb-24 overflow-hidden">
@@ -194,14 +202,24 @@ const HeroSection = () => {
               </span>
             </div>
 
-            {topBuildersQuery.isPending && (
-              <p className="font-mono-jb text-[12px] text-muted-ink py-3">
-                Loading top builders…
-              </p>
+            {showTopBuildersSkeleton && (
+              <div className="space-y-1" aria-hidden="true">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2.5 px-1.5 py-2 rounded-lg border-b border-dashed border-cream/[0.08] last:border-0"
+                  >
+                    <SkeletonLine className="h-5 w-6" />
+                    <SkeletonAvatar className="h-7 w-7" />
+                    <SkeletonLine className="h-3.5 flex-1" />
+                    <SkeletonLine className="h-4 w-12" />
+                  </div>
+                ))}
+              </div>
             )}
 
             <div className="space-y-1">
-              {builders.slice(0, 4).map((dev) => (
+              {!showTopBuildersSkeleton && builders.slice(0, 4).map((dev) => (
                 <div
                   key={`${dev.profileId}-${dev.rank}`}
                   className={cn(

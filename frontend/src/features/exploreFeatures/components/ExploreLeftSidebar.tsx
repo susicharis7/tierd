@@ -1,6 +1,12 @@
 import { Sticker, Tape } from "../../../components/tierd";
 import { Link } from "react-router-dom";
 import {
+  SkeletonAvatar,
+  SkeletonButton,
+  SkeletonLine,
+} from "../../../components/ui/loading";
+import { useDelayedPending } from "../../../hooks/useDelayedPending";
+import {
   formatChallengeStartsIn,
   formatChallengeTimeLeft,
   useMyActiveChallengeQuery,
@@ -27,6 +33,9 @@ export function ExploreLeftSidebar({
   currentProfile,
 }: ExploreLeftSidebarProps) {
   const activeChallengeQuery = useMyActiveChallengeQuery(userId);
+  const showChallengeSkeleton = useDelayedPending(
+    Boolean(userId) && activeChallengeQuery.isPending,
+  );
 
   const activeChallenge = activeChallengeQuery.data;
   const challengeTimer = activeChallenge
@@ -39,6 +48,13 @@ export function ExploreLeftSidebar({
     <aside className="hidden lg:block space-y-5 lg:sticky lg:top-[160px] self-start">
       {userId && currentProfile ? (
         <MiniProfileCard profile={currentProfile} userId={userId} />
+      ) : authLoading ? (
+        <div className="rounded-[14px] border border-cream/[0.08] bg-cream/[0.03] p-5" aria-hidden="true">
+          <SkeletonAvatar className="mx-auto h-12 w-12" />
+          <SkeletonLine className="mx-auto mt-3 h-4 w-28" />
+          <SkeletonLine className="mx-auto mt-2 h-2.5 w-20" />
+          <SkeletonButton className="mt-4 h-9 w-full" />
+        </div>
       ) : !authLoading ? (
         <div className="rounded-[14px] border border-dashed border-cream/20 bg-cream/[0.03] p-5 text-center">
           <p className="font-grot font-extrabold text-[15px] text-cream mb-1">
@@ -60,7 +76,13 @@ export function ExploreLeftSidebar({
         <p className="font-mono-jb text-[10px] uppercase tracking-[0.08em] text-cream/70 mb-2">
           // challenge
         </p>
-        {userId && activeChallenge ? (
+        {showChallengeSkeleton ? (
+          <div className="space-y-3" aria-hidden="true">
+            <SkeletonLine className="h-4 w-36" />
+            <SkeletonLine className="h-3 w-24" />
+            <SkeletonButton className="h-7 w-28" />
+          </div>
+        ) : userId && activeChallenge ? (
           <>
             <p className="font-grot font-extrabold text-[15px] text-cream leading-tight">
               {activeChallenge.title}
@@ -93,6 +115,25 @@ export function ExploreLeftSidebar({
 function NextTierNudge({ userId }: { userId: string }) {
   const progressQuery = useProfileProgressQuery(userId);
   const progress = progressQuery.data;
+  const showSkeleton = useDelayedPending(progressQuery.isPending);
+  if (showSkeleton) {
+    return (
+      <Sticker
+        color="peach"
+        tilt={-1.2}
+        padding="md"
+        radius="md"
+        className="relative !py-3.5"
+      >
+        <Tape color="tape" size="sm" tilt={8} className="-top-[8px] right-8" />
+        <div aria-hidden="true">
+          <SkeletonLine tone="light" className="h-4 w-32" />
+          <SkeletonLine tone="light" className="mt-3 h-3 w-full" />
+          <SkeletonLine tone="light" className="mt-2 h-3 w-3/4" />
+        </div>
+      </Sticker>
+    );
+  }
   if (!progress) return null;
 
   const ptsToNext = progress.pointsToNextTier;

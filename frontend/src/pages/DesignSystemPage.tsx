@@ -11,6 +11,16 @@ import {
   TierBadge,
   type Tier,
 } from "../components/tierd";
+import {
+  InlineSpinner,
+  SkeletonAvatar,
+  SkeletonButton,
+  SkeletonCommentRow,
+  SkeletonFeedCard,
+  SkeletonLeaderboardRow,
+  SkeletonLine,
+  SkeletonStatTile,
+} from "../components/ui/loading";
 import { tiltFromId } from "../lib/tilt";
 
 /**
@@ -269,6 +279,65 @@ export default function DesignSystemPage() {
           <div className="font-grot text-[22px] font-bold text-cream">
             what did you ship today
             <span className="inline-block w-[0.5ch] h-[0.9em] bg-orange ml-1 align-middle animate-blink" />
+          </div>
+        </Section>
+
+        {/* ============ 13 · LOADING STATES ============ */}
+        <Section title="13. Loading states" code="// Skeleton · InlineSpinner · feature shells">
+          <div className="grid lg:grid-cols-2 gap-5">
+            <div className="rounded-[18px] border border-ink-line bg-ink-2 p-5">
+              <MonoCaption tone="cream" className="mb-4">// dark surface skeletons</MonoCaption>
+              <div className="flex items-center gap-3 mb-5">
+                <SkeletonAvatar />
+                <div className="flex-1 space-y-2">
+                  <SkeletonLine className="h-4 w-40" />
+                  <SkeletonLine className="h-3 w-28" />
+                </div>
+                <SkeletonButton />
+              </div>
+              <SkeletonFeedCard className="rounded-[14px] border border-cream/[0.08] bg-cream/[0.02] px-4" />
+            </div>
+
+            <div className="rounded-[18px] bg-cream text-ink p-5 shadow-sticker">
+              <MonoCaption tone="muted" className="mb-4">// light sticker skeletons</MonoCaption>
+              <div className="grid grid-cols-2 gap-3 mb-5">
+                <SkeletonStatTile tone="light" />
+                <SkeletonStatTile tone="light" className="bg-peach" />
+              </div>
+              <div className="space-y-3">
+                <SkeletonCommentRow tone="light" />
+                <SkeletonCommentRow tone="light" />
+              </div>
+            </div>
+
+            <div className="rounded-[18px] border border-cream/10 bg-cream/[0.04] p-2 lg:col-span-2">
+              <div className="hidden sm:grid grid-cols-[60px_1fr_130px_100px_110px_130px] gap-x-4 items-center px-4 py-3.5 border-b border-dashed border-cream/10">
+                {["#", "Developer", "Scope", "Streak", "Tier"].map((h) => (
+                  <MonoCaption key={h} tone="muted">{h}</MonoCaption>
+                ))}
+                <MonoCaption tone="muted" className="justify-end">Score</MonoCaption>
+              </div>
+              <SkeletonLeaderboardRow />
+              <SkeletonLeaderboardRow />
+              <SkeletonLeaderboardRow />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4 lg:col-span-2">
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-full bg-orange text-cream font-mono-jb font-bold text-[13px] px-5 py-2.5 shadow-cta-orange"
+              >
+                <InlineSpinner className="h-3.5 w-3.5 border-cream/30 border-t-cream" label="Saving example" />
+                saving...
+              </button>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-full border border-dashed border-cream/25 text-cream font-mono-jb font-bold text-[13px] px-5 py-2.5"
+              >
+                <InlineSpinner label="Loading example" />
+                loading more
+              </button>
+            </div>
           </div>
         </Section>
       </div>

@@ -8,6 +8,13 @@ import { useAuth } from "../../authFeatures/AuthProvider";
 import { useGlobalLeaderboardQuery } from "../../rankingFeatures/useRankingData";
 import { mapTierToBadge } from "../../rankingFeatures/tierMapping";
 import type { LeaderboardEntry } from "../../../services/rankingService";
+import {
+  SkeletonAvatar,
+  SkeletonButton,
+  SkeletonLeaderboardRow,
+  SkeletonLine,
+} from "../../../components/ui/loading";
+import { useDelayedPending } from "../../../hooks/useDelayedPending";
 
 import {
   Doodle,
@@ -37,6 +44,7 @@ const LeaderboardPageContent = () => {
   const navigate = useNavigate();
 
   const developers = useMemo(() => leaderboardQuery.data ?? [], [leaderboardQuery.data]);
+  const showSkeleton = useDelayedPending(leaderboardQuery.isPending && developers.length === 0);
   const top3 = developers.slice(0, 3);
   const hasPodium = top3.length === 3;
   const currentUser = useMemo(
@@ -76,7 +84,9 @@ const LeaderboardPageContent = () => {
             </p>
           </div>
 
-          {currentUser && (
+          {showSkeleton && userId ? (
+            <RankStickerSkeleton />
+          ) : currentUser && (
             <Sticker color="cream" tilt={2} padding="md" radius="lg" className="min-w-[220px]">
               <Tape color="tape" size="sm" tilt={-4} className="-top-[10px] left-10" />
               <MonoCaption tone="muted" className="text-[9px]">
@@ -141,7 +151,13 @@ const LeaderboardPageContent = () => {
           </div>
         </div>
 
-        {hasPodium && (
+        {showSkeleton ? (
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1.15fr_1fr] gap-4 items-end mb-14" aria-hidden="true">
+            <PodiumSlotSkeleton place={2} />
+            <PodiumSlotSkeleton place={1} />
+            <PodiumSlotSkeleton place={3} />
+          </div>
+        ) : hasPodium && (
           <div className="grid grid-cols-1 md:grid-cols-[1fr_1.15fr_1fr] gap-4 items-end mb-14">
             <PodiumSlot dev={top3[1]} place={2} isYou={top3[1].profileId === userId} />
             <PodiumSlot dev={top3[0]} place={1} isYou={top3[0].profileId === userId} />
@@ -149,7 +165,7 @@ const LeaderboardPageContent = () => {
           </div>
         )}
 
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-[18px] bg-cream/[0.04] border border-cream/10 p-2 overflow-hidden">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-[18px] bg-cream/[0.04] border border-cream/10 p-2 overflow-hidden" aria-busy={leaderboardQuery.isPending}>
           <div className="hidden sm:grid grid-cols-[60px_1fr_130px_100px_110px_130px] gap-x-4 items-center px-4 py-3.5 border-b border-dashed border-cream/10">
             {["#", "Developer", "Scope", "Streak", "Tier"].map((h) => (
               <MonoCaption key={h} tone="muted">{h}</MonoCaption>
@@ -157,15 +173,23 @@ const LeaderboardPageContent = () => {
             <MonoCaption tone="muted" className="justify-end">Score</MonoCaption>
           </div>
 
-          {leaderboardQuery.isPending && (
-            <div className="px-5 py-10 font-mono-jb text-[13px] text-muted-ink">Loading leaderboard...</div>
+          {showSkeleton && (
+            <div>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <SkeletonLeaderboardRow key={i} />
+              ))}
+            </div>
+          )}
+
+          {leaderboardQuery.isPending && developers.length === 0 && !showSkeleton && (
+            <div className="min-h-[300px]" aria-hidden />
           )}
 
           {!leaderboardQuery.isPending && developers.length === 0 && (
             <div className="px-5 py-10 font-mono-jb text-[13px] text-muted-ink">No leaderboard data yet.</div>
           )}
 
-          {developers.map((dev, i) => (
+          {!showSkeleton && developers.map((dev, i) => (
             <LeaderboardRow
               key={`${dev.profileId}-${dev.rank}`}
               dev={dev}
@@ -208,6 +232,56 @@ const LeaderboardPageContent = () => {
 };
 
 export default LeaderboardPageContent;
+
+function RankStickerSkeleton() {
+  return (
+    <Sticker color="cream" tilt={2} padding="md" radius="lg" className="min-w-[220px]" aria-hidden="true">
+      <Tape color="tape" size="sm" tilt={-4} className="-top-[10px] left-10" />
+      <SkeletonLine tone="light" className="h-3 w-20" />
+      <div className="mt-3 flex items-baseline gap-3">
+        <SkeletonLine tone="light" className="h-10 w-20 rounded-lg" />
+        <SkeletonLine tone="light" className="h-3 w-24" />
+      </div>
+      <div className="my-3 border-t border-dashed border-ink/15" />
+      <SkeletonLine tone="light" className="h-3 w-40" />
+    </Sticker>
+  );
+}
+
+function PodiumSlotSkeleton({ place }: { place: 1 | 2 | 3 }) {
+  const isFirst = place === 1;
+  return (
+    <div className={cn(isFirst && "-translate-y-[30px]")}>
+      <Sticker
+        color={isFirst ? "orange" : place === 2 ? "cream" : "peach"}
+        tilt={place === 1 ? 1 : place === 2 ? -2 : 2}
+        padding="lg"
+        radius="xl"
+        className={cn("h-[200px] flex flex-col justify-between", isFirst && "h-[230px] shadow-glow-orange")}
+      >
+        <Tape
+          color="tape"
+          size="md"
+          tilt={isFirst ? -5 : 5}
+          className={cn("-top-[10px]", isFirst ? "left-8" : place === 2 ? "right-8" : "left-8")}
+        />
+        <div className="flex items-start justify-between">
+          <SkeletonLine tone={isFirst ? "dark" : "light"} className="h-14 w-20 rounded-xl" />
+          <SkeletonButton tone={isFirst ? "dark" : "light"} className="h-6 w-16" />
+        </div>
+        <div>
+          <SkeletonAvatar tone={isFirst ? "dark" : "light"} className="mb-3 h-12 w-12" />
+          <SkeletonLine tone={isFirst ? "dark" : "light"} className="h-5 w-36" />
+          <SkeletonLine tone={isFirst ? "dark" : "light"} className="mt-2 h-3 w-28" />
+        </div>
+      </Sticker>
+      <div className="mt-5 text-center">
+        <SkeletonLine className={cn("mx-auto h-9 rounded-xl", isFirst ? "w-32" : "w-24")} />
+        <SkeletonLine className="mx-auto mt-2 h-3 w-16" />
+      </div>
+    </div>
+  );
+}
 
 const MEDAL = {
   1: { label: "GOLD", chipBg: "bg-cream", chipFg: "text-ink" },

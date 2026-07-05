@@ -199,4 +199,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   .animate-blink { animation: none; }
+  .tierd-skeleton { animation: none !important; }
 }

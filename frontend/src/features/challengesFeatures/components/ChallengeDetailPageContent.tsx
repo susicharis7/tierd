@@ -3,6 +3,12 @@ import { Link, useParams } from "react-router-dom";
 import Navbar from "../../../components/Navbar";
 import Footer from "../../../components/Footer";
 import { Doodle, MonoCaption, UserAvatar } from "../../../components/tierd";
+import {
+  InlineSpinner,
+  SkeletonAvatar,
+  SkeletonButton,
+  SkeletonLine,
+} from "../../../components/ui/loading";
 import { useAuth } from "../../authFeatures/AuthProvider";
 import {
   useChallengeDetailQuery,
@@ -288,11 +294,7 @@ const ChallengeDetailPageContent = () => {
           back to challenges
         </Link>
 
-        {detailQuery.isPending && (
-          <div className="rounded-[18px] border border-ink-line bg-ink-2 p-6 font-mono-jb text-[12px] text-muted-ink">
-            loading challenge...
-          </div>
-        )}
+        {detailQuery.isPending && <ChallengeDetailSkeleton />}
 
         {!detailQuery.isPending && !challenge && (
           <div className="rounded-[18px] border border-dashed border-cream/20 bg-cream/[0.03] p-8 text-center">
@@ -431,9 +433,18 @@ const ChallengeDetailPageContent = () => {
                   <button
                     type="submit"
                     disabled={submitDisabled}
-                    className="rounded-full bg-orange text-cream font-mono-jb font-bold text-[12px] px-5 py-2.5 disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-full bg-orange text-cream font-mono-jb font-bold text-[12px] px-5 py-2.5 disabled:opacity-50"
                   >
-                    {submitMutation.isPending ? "saving..." : submission ? "update submission" : "submit"}
+                    {submitMutation.isPending ? (
+                      <>
+                        <InlineSpinner className="h-3.5 w-3.5 border-cream/30 border-t-cream" label="Saving submission" />
+                        saving...
+                      </>
+                    ) : submission ? (
+                      "update submission"
+                    ) : (
+                      "submit"
+                    )}
                   </button>
                   <span className="font-mono-jb text-[11px] text-muted-ink">
                     status: {myState?.submission_status ?? "none"}
@@ -554,6 +565,96 @@ function StatCell({ label, value }: { label: string; value: string }) {
     <div className="rounded-[12px] border border-cream/10 bg-cream/[0.02] p-3">
       <p className="font-mono-jb text-[10px] uppercase tracking-[0.08em] text-muted-ink">{label}</p>
       <p className="font-grot font-extrabold text-[15px] text-cream mt-1 truncate">{value}</p>
+    </div>
+  );
+}
+
+function ChallengeDetailSkeleton() {
+  return (
+    <div className="space-y-8" aria-hidden="true">
+      <section className="rounded-[20px] border border-ink-line bg-ink-2 p-6 sm:p-8">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="min-w-0 flex-1">
+            <div className="mb-4 flex items-center gap-2">
+              <SkeletonButton className="h-6 w-20 rounded-full" />
+              <SkeletonLine className="h-3 w-40" />
+            </div>
+            <SkeletonLine className="h-12 w-[min(560px,100%)] rounded-xl" />
+            <div className="mt-5 max-w-[800px] space-y-2">
+              <SkeletonLine className="h-3.5 w-full" />
+              <SkeletonLine className="h-3.5 w-4/5" />
+            </div>
+          </div>
+          <div className="rounded-[14px] bg-cream/[0.03] border border-cream/15 p-4 min-w-[260px]">
+            <SkeletonLine className="h-3 w-20" />
+            <SkeletonLine className="mt-3 h-7 w-32" />
+          </div>
+        </div>
+        <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-[12px] border border-cream/10 bg-cream/[0.02] p-3">
+              <SkeletonLine className="h-2.5 w-16" />
+              <SkeletonLine className="mt-2 h-4 w-24" />
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
+        <main className="space-y-6">
+          <section className="rounded-[18px] border border-ink-line bg-ink-2 p-6">
+            <SkeletonLine className="mb-5 h-5 w-36" />
+            <div className="grid sm:grid-cols-2 gap-5">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i}>
+                  <SkeletonLine className="h-4 w-32" />
+                  <SkeletonLine className="mt-3 h-3 w-full" />
+                  <SkeletonLine className="mt-2 h-3 w-4/5" />
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-[18px] border border-ink-line bg-ink-2 p-6">
+            <SkeletonLine className="mb-5 h-5 w-40" />
+            <div className="space-y-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i}>
+                  <SkeletonLine className="h-4 w-44" />
+                  <SkeletonLine className="mt-3 h-3 w-full" />
+                  <SkeletonLine className="mt-2 h-3 w-5/6" />
+                </div>
+              ))}
+            </div>
+          </section>
+        </main>
+
+        <aside className="space-y-6">
+          <section className="rounded-[18px] border border-ink-line bg-ink-2 p-5">
+            <SkeletonLine className="mb-4 h-5 w-36" />
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 border-b border-dashed border-cream/[0.08] py-3 last:border-0">
+                <SkeletonLine className="h-5 w-6" />
+                <SkeletonAvatar className="h-8 w-8" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <SkeletonLine className="h-3.5 w-28" />
+                  <SkeletonLine className="h-2.5 w-20" />
+                </div>
+              </div>
+            ))}
+          </section>
+
+          <section className="rounded-[18px] border border-ink-line bg-ink-2 p-5">
+            <SkeletonLine className="mb-4 h-5 w-36" />
+            <div className="space-y-3">
+              <SkeletonLine className="h-10 w-full rounded-[10px]" />
+              <SkeletonLine className="h-10 w-full rounded-[10px]" />
+              <SkeletonLine className="h-24 w-full rounded-[10px]" />
+              <SkeletonButton className="h-10 w-full" />
+            </div>
+          </section>
+        </aside>
+      </div>
     </div>
   );
 }

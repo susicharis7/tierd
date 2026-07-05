@@ -8,6 +8,8 @@ import {
   TierBadge,
   UserAvatar,
 } from "./tierd";
+import { SkeletonLeaderboardRow } from "./ui/loading";
+import { useDelayedPending } from "../hooks/useDelayedPending";
 import { cn } from "../lib/utils";
 import { useLandingTopBuildersQuery } from "../features/rankingFeatures/useRankingData";
 import { mapTierToBadge } from "../features/rankingFeatures/tierMapping";
@@ -24,6 +26,7 @@ const LeaderboardPreview = () => {
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("Global");
   const leaderboardQuery = useLandingTopBuildersQuery(8);
   const leaderboard = leaderboardQuery.data ?? [];
+  const showSkeleton = useDelayedPending(leaderboardQuery.isPending && leaderboard.length === 0);
 
   return (
     <section className="relative py-24">
@@ -85,7 +88,7 @@ const LeaderboardPreview = () => {
           })}
         </div>
 
-        <div className="rounded-[18px] bg-cream/[0.04] border border-cream/10 p-2">
+        <div className="rounded-[18px] bg-cream/[0.04] border border-cream/10 p-2" aria-busy={leaderboardQuery.isPending}>
           <div className="hidden sm:grid grid-cols-[60px_1fr_120px_110px_120px] gap-x-4 items-center px-4 py-3 border-b border-dashed border-cream/10">
             {["#", "Developer", "Scope", "Tier"].map((h) => (
               <MonoCaption key={h} tone="muted">
@@ -97,10 +100,16 @@ const LeaderboardPreview = () => {
             </MonoCaption>
           </div>
 
-          {leaderboardQuery.isPending && (
-            <div className="px-5 py-10 font-mono-jb text-[13px] text-muted-ink">
-              Loading leaderboard...
+          {showSkeleton && (
+            <div>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <SkeletonLeaderboardRow key={i} columns={5} compact />
+              ))}
             </div>
+          )}
+
+          {leaderboardQuery.isPending && leaderboard.length === 0 && !showSkeleton && (
+            <div className="min-h-[250px]" aria-hidden />
           )}
 
           {!leaderboardQuery.isPending && leaderboard.length === 0 && (
@@ -109,7 +118,7 @@ const LeaderboardPreview = () => {
             </div>
           )}
 
-          {leaderboard.map((dev, i) => {
+          {!showSkeleton && leaderboard.map((dev, i) => {
             const tier = mapTierToBadge(dev.tierCode ?? dev.tier);
             const isLast = i === leaderboard.length - 1;
             const topThree = dev.rank <= 3;

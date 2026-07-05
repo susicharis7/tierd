@@ -33,6 +33,9 @@ const Explore = () => {
     loadMoreSentinelRef,
     isFetchingNextPage,
     commentMutation,
+    deleteCommentMutation,
+    deletePostMutation,
+    updatePostMutation,
     createPostMutation,
     composerContent,
     setComposerContent,
@@ -44,6 +47,9 @@ const Explore = () => {
     handleToggleLike,
     handleToggleComments,
     handleSubmitComment,
+    handleDeleteComment,
+    handleDeletePost,
+    handleEditPost,
     setLightboxPostId,
   } = useExplorePageController();
 
@@ -105,10 +111,17 @@ const Explore = () => {
                 commentDraft,
                 commentMutationPending: commentMutation.isPending,
                 commentMutationPostId: commentMutation.variables?.postId,
+                currentUserId: userId,
+                deletingCommentId: deleteCommentMutation.variables?.commentId,
+                deletingPostId: deletePostMutation.variables?.postId,
+                updatingPostId: updatePostMutation.variables?.postId,
                 onToggleLike: handleToggleLike,
                 onToggleComments: handleToggleComments,
                 onChangeCommentDraft: setCommentDraft,
                 onSubmitComment: handleSubmitComment,
+                onDeleteComment: handleDeleteComment,
+                onDeletePost: handleDeletePost,
+                onEditPost: handleEditPost,
                 onOpenMediaLightbox: handleOpenMediaLightbox,
                 loadMoreSentinelRef,
                 isFetchingNextPage,
@@ -141,6 +154,11 @@ const Explore = () => {
             commentMutation.isPending &&
             commentMutation.variables?.postId === lightboxPost.id
           }
+          currentUserId={userId}
+          deletingCommentId={deleteCommentMutation.variables?.commentId}
+          deletingPost={deletePostMutation.variables?.postId === lightboxPost.id}
+          onDeleteComment={(commentId) => handleDeleteComment(lightboxPost.id, commentId)}
+          onDeletePost={() => handleDeletePost(lightboxPost.id)}
           onToggleLike={() => handleToggleLike(lightboxPost.id)}
           onClose={() => setLightboxPostId(null)}
         />

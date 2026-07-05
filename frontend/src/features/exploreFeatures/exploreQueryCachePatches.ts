@@ -48,6 +48,46 @@ export function patchCommentCountInInfinitePosts(
   return { ...old, pages };
 }
 
+export function patchRemovePostInInfinitePosts(
+  old: PostsInfiniteData | undefined,
+  postId: string,
+): PostsInfiniteData | undefined {
+  if (!old) return old;
+  let found = false;
+  const pages = old.pages.map((page) => {
+    const nextItems = page.items.filter((p) => {
+      if (p.id !== postId) return true;
+      found = true;
+      return false;
+    });
+    return { ...page, items: nextItems };
+  });
+  if (!found) return old;
+  return { ...old, pages };
+}
+
+export function patchUpdatePostContentInInfinitePosts(
+  old: PostsInfiniteData | undefined,
+  postId: string,
+  content: string,
+): PostsInfiniteData | undefined {
+  if (!old) return old;
+  let found = false;
+  const pages = old.pages.map((page) => ({
+    ...page,
+    items: page.items.map((p) => {
+      if (p.id !== postId) return p;
+      found = true;
+      return {
+        ...p,
+        content,
+      };
+    }),
+  }));
+  if (!found) return old;
+  return { ...old, pages };
+}
+
 export function isUserPostsQueryKey(key: unknown): boolean {
   return (
     Array.isArray(key) &&

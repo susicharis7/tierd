@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Heart, MessageSquare, Image as ImageIcon } from "lucide-react";
+import { Heart, MessageSquare, Image as ImageIcon, Pencil, Trash2 } from "lucide-react";
 
 import { Doodle, UserAvatar } from "../../components/tierd";
 import { Textarea } from "../../components/ui/textarea";
@@ -21,10 +21,17 @@ export function ExplorePostCard({
   commentsLoading,
   commentDraft,
   commentSubmitting,
+  currentUserId,
+  deletingCommentId,
+  deletingPost,
+  updatingPost,
   onToggleLike,
   onToggleComments,
   onChangeCommentDraft,
   onSubmitComment,
+  onDeleteComment,
+  onDeletePost,
+  onEditPost,
   onOpenMediaLightbox,
 }: {
   post: FeedPost;
@@ -34,14 +41,23 @@ export function ExplorePostCard({
   commentsLoading: boolean;
   commentDraft: string;
   commentSubmitting: boolean;
+  currentUserId: string | null;
+  deletingCommentId?: string;
+  deletingPost?: boolean;
+  updatingPost?: boolean;
   onToggleLike: () => void;
   onToggleComments: () => void;
   onChangeCommentDraft: (v: string) => void;
   onSubmitComment: () => void;
+  onDeleteComment: (commentId: string) => void;
+  onDeletePost: () => void;
+  onEditPost: (content: string) => Promise<void>;
   onOpenMediaLightbox: () => void;
 }) {
   const liked = !!post.liked_by_me;
   const [feedBodyExpanded, setFeedBodyExpanded] = useState(false);
+  const [isEditingPost, setIsEditingPost] = useState(false);
+  const [editDraft, setEditDraft] = useState(post.content);
   const feedTextLong = post.content.length > FEED_POST_PREVIEW_CHARS;
   const feedBodyText =
     feedTextLong && !feedBodyExpanded
@@ -50,6 +66,20 @@ export function ExplorePostCard({
 
   const authorName = authorDisplayName(post.author);
   const profilePath = `/profile/${post.author.username ?? post.author.id}`;
+  const canDeletePost = Boolean(currentUserId && post.author.id === currentUserId);
+  const canEditPost = canDeletePost;
+  const editUnchanged = editDraft.trim() === post.content.trim();
+
+  useEffect(() => {
+    if (!isEditingPost) {
+      setEditDraft(post.content);
+    }
+  }, [post.content, isEditingPost]);
+
+  const handleSaveEdit = async () => {
+    await onEditPost(editDraft);
+    setIsEditingPost(false);
+  };
 
   return (
     <motion.article
@@ -104,21 +134,84 @@ export function ExplorePostCard({
               <span className="font-mono-jb text-[11px] text-muted-ink shrink-0">
                 {timeAgo(post.created_at)}
               </span>
+              {canDeletePost && (
+                <div className="ml-auto flex items-center gap-1.5">
+                  {canEditPost && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditDraft(post.content);
+                        setIsEditingPost(true);
+                      }}
+                      disabled={deletingPost || updatingPost}
+                      className="inline-flex items-center gap-1 rounded-full border border-cream/20 px-2 py-1 text-[10px] font-mono-jb text-cream/75 hover:border-orange hover:text-orange disabled:opacity-50"
+                      aria-label="Edit post"
+                    >
+                      <Pencil size={10} />
+                      edit
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={onDeletePost}
+                    disabled={deletingPost || updatingPost}
+                    className="inline-flex items-center gap-1 rounded-full border border-cream/20 px-2 py-1 text-[10px] font-mono-jb text-cream/75 hover:border-orange hover:text-orange disabled:opacity-50"
+                    aria-label="Delete post"
+                  >
+                    <Trash2 size={10} />
+                    {deletingPost ? "..." : "delete post"}
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="mb-3">
-              <p className="font-grot text-[16px] leading-[1.45] text-cream/90 whitespace-pre-line">
-                {feedBodyText}
-                {feedTextLong && !feedBodyExpanded ? "…" : null}
-              </p>
-              {feedTextLong && (
-                <button
-                  type="button"
-                  className="mt-1 font-mono-jb text-[12px] font-bold text-orange/80 hover:text-orange transition-colors"
-                  onClick={() => setFeedBodyExpanded((e) => !e)}
-                >
-                  {feedBodyExpanded ? "show less" : "show more"}
-                </button>
+              {isEditingPost ? (
+                <div className="space-y-2">
+                  <Textarea
+                    value={editDraft}
+                    onChange={(e) => setEditDraft(e.target.value)}
+                    className="bg-cream/[0.04] border-ink-line focus-visible:ring-orange/40 min-h-[96px] text-[14px] font-grot resize-none text-cream placeholder:text-muted-ink"
+                    rows={4}
+                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsEditingPost(false);
+                        setEditDraft(post.content);
+                      }}
+                      disabled={updatingPost}
+                      className="rounded-full border border-cream/25 px-3 py-1.5 text-[11px] font-mono-jb text-cream/80 hover:border-cream/45 disabled:opacity-50"
+                    >
+                      cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleSaveEdit()}
+                      disabled={updatingPost || !editDraft.trim() || editUnchanged}
+                      className="rounded-full bg-orange px-3 py-1.5 text-[11px] font-mono-jb font-bold text-cream disabled:opacity-50"
+                    >
+                      {updatingPost ? "saving..." : "save edit"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p className="font-grot text-[16px] leading-[1.45] text-cream/90 whitespace-pre-line">
+                    {feedBodyText}
+                    {feedTextLong && !feedBodyExpanded ? "..." : null}
+                  </p>
+                  {feedTextLong && (
+                    <button
+                      type="button"
+                      className="mt-1 font-mono-jb text-[12px] font-bold text-orange/80 hover:text-orange transition-colors"
+                      onClick={() => setFeedBodyExpanded((e) => !e)}
+                    >
+                      {feedBodyExpanded ? "show less" : "show more"}
+                    </button>
+                  )}
+                </>
               )}
             </div>
 
@@ -193,7 +286,13 @@ export function ExplorePostCard({
                     </p>
                   ) : (
                     comments.map((c) => (
-                      <CommentRow key={c.id} comment={c} />
+                      <CommentRow
+                        key={c.id}
+                        comment={c}
+                        canDelete={Boolean(currentUserId && c.author.id === currentUserId)}
+                        deleting={deletingCommentId === c.id}
+                        onDelete={() => onDeleteComment(c.id)}
+                      />
                     ))
                   )}
                 </div>
@@ -232,7 +331,17 @@ export function ExplorePostCard({
   );
 }
 
-function CommentRow({ comment: c }: { comment: PostComment }) {
+function CommentRow({
+  comment: c,
+  canDelete,
+  deleting,
+  onDelete,
+}: {
+  comment: PostComment;
+  canDelete: boolean;
+  deleting: boolean;
+  onDelete: () => void;
+}) {
   const name = c.author.full_name?.trim() || c.author.username || "Anonymous";
   return (
     <div className="flex items-start gap-2.5">
@@ -251,6 +360,18 @@ function CommentRow({ comment: c }: { comment: PostComment }) {
           <p className="font-mono-jb text-[10px] text-muted-ink">
             {timeAgo(c.created_at)}
           </p>
+          {canDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={deleting}
+              className="ml-auto inline-flex items-center gap-1 rounded-full border border-cream/20 px-2 py-1 text-[10px] font-mono-jb text-cream/75 hover:border-orange hover:text-orange disabled:opacity-50"
+              aria-label="Delete comment"
+            >
+              <Trash2 size={10} />
+              {deleting ? "..." : "delete"}
+            </button>
+          )}
         </div>
         <p className="mt-1 font-grot text-[14px] leading-[1.5] text-cream/80 whitespace-pre-line">
           {c.content}

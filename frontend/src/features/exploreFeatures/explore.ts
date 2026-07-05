@@ -348,6 +348,84 @@ export async function createPost(params: {
   }
 }
 
+function extractFeedImagePathFromPublicUrl(url: string): string | null {
+  const marker = "/storage/v1/object/public/feed-images/";
+  const idx = url.indexOf(marker);
+  if (idx < 0) return null;
+  const encodedPath = url.slice(idx + marker.length);
+  if (!encodedPath) return null;
+  try {
+    return decodeURIComponent(encodedPath);
+  } catch {
+    return encodedPath;
+  }
+}
+
+async function tryRemoveFeedImageByPublicUrl(url: string | null | undefined) {
+  if (!url) return;
+  const path = extractFeedImagePathFromPublicUrl(url);
+  if (!path) return;
+  const { error } = await supabase.storage.from("feed-images").remove([path]);
+  if (error) {
+    console.warn("[Explore] feed image remove skipped", error);
+  }
+}
+
+export async function deletePost(params: {
+  userId: string;
+  postId: string;
+}): Promise<void> {
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase is not configured.");
+  }
+
+  const { data: row, error: readError } = await supabase
+    .from("posts")
+    .select("id, user_id, image_url")
+    .eq("id", params.postId)
+    .eq("user_id", params.userId)
+    .maybeSingle();
+
+  if (readError) throw readError;
+  if (!row) throw new Error("Post not found or not owned by current user.");
+
+  const { error: deleteError } = await supabase
+    .from("posts")
+    .delete()
+    .eq("id", params.postId)
+    .eq("user_id", params.userId);
+
+  if (deleteError) throw deleteError;
+
+  await tryRemoveFeedImageByPublicUrl((row.image_url as string | null) ?? null);
+}
+
+export async function updatePost(params: {
+  userId: string;
+  postId: string;
+  content: string;
+}): Promise<void> {
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase is not configured.");
+  }
+
+  const trimmed = params.content.trim();
+  if (!trimmed) {
+    throw new Error("Post content cannot be empty.");
+  }
+  if (trimmed.length > 4000) {
+    throw new Error("Post content is too long.");
+  }
+
+  const { error } = await supabase
+    .from("posts")
+    .update({ content: trimmed })
+    .eq("id", params.postId)
+    .eq("user_id", params.userId);
+
+  if (error) throw error;
+}
+
 export async function fetchUserLikedPostIds(params: {
   userId: string;
   postIds: string[];
@@ -500,4 +578,25 @@ export async function addPostComment(params: {
     },
   };
 }
+
+export async function deletePostComment(params: {
+  userId: string;
+  postId: string;
+  commentId: string;
+}): Promise<void> {
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase is not configured.");
+  }
+
+  const { error } = await supabase
+    .from("post_comments")
+    .delete()
+    .eq("id", params.commentId)
+    .eq("post_id", params.postId)
+    .eq("user_id", params.userId);
+
+  if (error) throw error;
+}
+
+
 

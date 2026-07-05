@@ -25,7 +25,7 @@ interface ProfileIdentityCardProps {
 
 /**
  * Profile head - avatar (overlapping the banner) + name block
- * (lock/unlock state, handle/role/location, actions, bio, links).
+ * (verified/unverified state, handle/role/location, actions, bio, links).
  */
 const ProfileIdentityCard = ({
   displayName,
@@ -77,14 +77,14 @@ const ProfileIdentityCard = ({
               </h1>
               <span
                 className={cn(
-                  "inline-flex items-center rounded-lg font-mono-jb font-bold text-[11px] uppercase tracking-[0.1em] px-3 py-1.5 shadow-press",
+                  "inline-flex items-center rounded-lg font-mono-jb font-bold text-[11px] uppercase tracking-[0.1em] px-3 py-1.5 shadow-press border",
                   isUnlocked
-                    ? "bg-forest text-cream"
-                    : "bg-ink-2 text-cream border border-cream/20",
+                    ? "bg-orange text-cream border-orange/80"
+                    : "bg-plum/20 text-cream border-plum/60",
                 )}
                 style={{ transform: "rotate(-4deg)" }}
               >
-                {isUnlocked ? "UNLOCKED" : "LOCKED"}
+                {isUnlocked ? "VERIFIED" : "UNVERIFIED"}
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 mt-3 font-mono-jb text-[13px]">

@@ -56,4 +56,11 @@ export function isUserPostsQueryKey(key: unknown): boolean {
   );
 }
 
+export function isFeedLikedPostIdsQueryKey(key: unknown): boolean {
+  return (
+    Array.isArray(key) &&
+    key[0] === "explore" &&
+    key[1] === "feedLikedPostIds"
+  );
+}
 

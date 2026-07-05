@@ -1,8 +1,9 @@
-﻿import { useEffect, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../authFeatures/AuthProvider";
 import {
   useExploreProfilesQuery,
   useExploreFeedQuery,
+  useExploreFeedLikedPostIdsQuery,
   useExploreSearchQuery,
   useExploreCommentsQuery,
   useExploreLikeMutation,
@@ -19,7 +20,13 @@ export function useExplorePageController() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const profilesQuery = useExploreProfilesQuery();
-  const feedQuery = useExploreFeedQuery(userId);
+  const feedQuery = useExploreFeedQuery();
+  const rawPosts = useMemo(
+    () => feedQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [feedQuery.data],
+  );
+  const visiblePostIds = useMemo(() => rawPosts.map((p) => p.id), [rawPosts]);
+  const likedPostIdsQuery = useExploreFeedLikedPostIdsQuery(userId, visiblePostIds);
   const {
     data: searchResults,
     isFetching: searchFetching,
@@ -50,7 +57,19 @@ export function useExplorePageController() {
 
   const profiles = profilesQuery.data ?? [];
   const profilesLoading = profilesQuery.isPending;
-  const posts = feedQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const posts = useMemo(() => {
+    if (!userId) {
+      return rawPosts.map((p) => ({ ...p, liked_by_me: false }));
+    }
+
+    const likedPostIds = likedPostIdsQuery.data;
+    if (!likedPostIds) return rawPosts;
+
+    return rawPosts.map((p) => ({
+      ...p,
+      liked_by_me: likedPostIds.has(p.id),
+    }));
+  }, [likedPostIdsQuery.data, rawPosts, userId]);
   const postsLoading = feedQuery.isPending;
 
   const { fetchNextPage, hasNextPage, isFetchingNextPage } = feedQuery;
@@ -190,5 +209,3 @@ export function useExplorePageController() {
     setLightboxPostId,
   };
 }
-
-

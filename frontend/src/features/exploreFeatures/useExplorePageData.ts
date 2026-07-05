@@ -11,16 +11,18 @@ import type { ProfileRow } from "../authFeatures/authTypes";
 import {
   addPostComment,
   createPost,
-  fetchExploreFeedWithLikes,
+  fetchFeedPosts,
   fetchPostComments,
   fetchProfileByUsername,
   fetchProfiles,
   fetchUserPostsWithLikes,
+  fetchUserLikedPostIds,
   searchProfiles,
   toggleLikePost,
 } from "./explore";
 import {
   isUserPostsQueryKey,
+  isFeedLikedPostIdsQueryKey,
   patchCommentCountInInfinitePosts,
   patchLikeInInfinitePosts,
   type PostsInfiniteData,
@@ -60,17 +62,35 @@ export function useExploreProfilesQuery() {
   });
 }
 
-export function useExploreFeedQuery(userId: string | null) {
+export function useExploreFeedQuery() {
   return useInfiniteQuery({
-    queryKey: exploreKeys.feed(userId),
-    queryFn: ({ pageParam }) =>
-      fetchExploreFeedWithLikes(
-        userId,
-        FEED_PAGE_SIZE,
-        pageParam as string | undefined,
-      ),
+    queryKey: exploreKeys.feed(),
+    queryFn: ({ pageParam, signal }) =>
+      fetchFeedPosts({
+        limit: FEED_PAGE_SIZE,
+        cursor: pageParam as string | undefined,
+        signal,
+      }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    staleTime: FEED_STALE_MS,
+  });
+}
+
+export function useExploreFeedLikedPostIdsQuery(
+  userId: string | null,
+  postIds: readonly string[],
+) {
+  const uniquePostIds = [...new Set(postIds)].sort();
+  return useQuery({
+    queryKey: exploreKeys.feedLikedPostIds(userId ?? "anon", uniquePostIds),
+    queryFn: ({ signal }) =>
+      fetchUserLikedPostIds({
+        userId: userId!,
+        postIds: uniquePostIds,
+        signal,
+      }),
+    enabled: Boolean(userId) && uniquePostIds.length > 0,
     staleTime: FEED_STALE_MS,
   });
 }
@@ -104,6 +124,10 @@ export function useExploreCommentsQuery(postIdForComments: string | null) {
 
 type LikeCtx = {
   previous: ExploreFeedInfiniteData | undefined;
+  previousLikedPostIds: Array<{
+    queryKey: readonly unknown[];
+    data: Set<string> | undefined;
+  }>;
   previousUserPosts: Array<{
     queryKey: readonly unknown[];
     data: UserPostsInfiniteData | undefined;
@@ -122,14 +146,27 @@ export function useExploreLikeMutation(
     },
     onMutate: async ({ postId }) => {
       if (!userId) return undefined;
-      await queryClient.cancelQueries({ queryKey: exploreKeys.feed(userId) });
+      await queryClient.cancelQueries({ queryKey: exploreKeys.feed() });
+      await queryClient.cancelQueries({
+        predicate: (q) => isFeedLikedPostIdsQueryKey(q.queryKey),
+      });
       await queryClient.cancelQueries({
         predicate: (q) => isUserPostsQueryKey(q.queryKey),
       });
 
       const previous = queryClient.getQueryData<ExploreFeedInfiniteData>(
-        exploreKeys.feed(userId),
+        exploreKeys.feed(),
       );
+      const previousLikedPostIds = queryClient
+        .getQueryCache()
+        .findAll({
+          predicate: (q) =>
+            isFeedLikedPostIdsQueryKey(q.queryKey) && q.queryKey[2] === userId,
+        })
+        .map((q) => ({
+          queryKey: q.queryKey as readonly unknown[],
+          data: queryClient.getQueryData<Set<string>>(q.queryKey),
+        }));
       const previousUserPosts = queryClient
         .getQueryCache()
         .findAll({ predicate: (q) => isUserPostsQueryKey(q.queryKey) })
@@ -139,19 +176,40 @@ export function useExploreLikeMutation(
         }));
 
       queryClient.setQueryData<ExploreFeedInfiniteData>(
-        exploreKeys.feed(userId),
+        exploreKeys.feed(),
         (old) => patchLikeInInfinitePosts(old, postId),
+      );
+      queryClient.setQueriesData<Set<string>>(
+        {
+          predicate: (q) =>
+            isFeedLikedPostIdsQueryKey(q.queryKey) && q.queryKey[2] === userId,
+        },
+        (old) => {
+          if (!old) return old;
+          const next = new Set(old);
+          if (next.has(postId)) {
+            next.delete(postId);
+          } else {
+            next.add(postId);
+          }
+          return next;
+        },
       );
       queryClient.setQueriesData<UserPostsInfiniteData>(
         { predicate: (q) => isUserPostsQueryKey(q.queryKey) },
         (old) => patchLikeInInfinitePosts(old, postId),
       );
 
-      return { previous, previousUserPosts };
+      return { previous, previousLikedPostIds, previousUserPosts };
     },
     onError: (err, _vars, ctx) => {
       if (userId && ctx?.previous !== undefined) {
-        queryClient.setQueryData(exploreKeys.feed(userId), ctx.previous);
+        queryClient.setQueryData(exploreKeys.feed(), ctx.previous);
+      }
+      if (ctx?.previousLikedPostIds) {
+        for (const { queryKey, data } of ctx.previousLikedPostIds) {
+          queryClient.setQueryData(queryKey, data);
+        }
       }
       if (ctx?.previousUserPosts) {
         for (const { queryKey, data } of ctx.previousUserPosts) {
@@ -163,8 +221,12 @@ export function useExploreLikeMutation(
     },
     onSettled: () => {
       if (userId) {
-        void queryClient.invalidateQueries({ queryKey: exploreKeys.feed(userId) });
+        void queryClient.invalidateQueries({
+          predicate: (q) =>
+            isFeedLikedPostIdsQueryKey(q.queryKey) && q.queryKey[2] === userId,
+        });
       }
+      void queryClient.invalidateQueries({ queryKey: exploreKeys.feed() });
       void queryClient.invalidateQueries({
         predicate: (q) => isUserPostsQueryKey(q.queryKey),
       });
@@ -205,7 +267,7 @@ export function useExploreAddCommentMutation(
       if (!userId) return undefined;
       const trimmed = content.trim();
       await queryClient.cancelQueries({ queryKey: exploreKeys.comments(postId) });
-      await queryClient.cancelQueries({ queryKey: exploreKeys.feed(userId) });
+      await queryClient.cancelQueries({ queryKey: exploreKeys.feed() });
       await queryClient.cancelQueries({
         predicate: (q) => isUserPostsQueryKey(q.queryKey),
       });
@@ -214,7 +276,7 @@ export function useExploreAddCommentMutation(
         exploreKeys.comments(postId),
       );
       const prevFeed = queryClient.getQueryData<ExploreFeedInfiniteData>(
-        exploreKeys.feed(userId),
+        exploreKeys.feed(),
       );
       const prevUserPosts = queryClient
         .getQueryCache()
@@ -243,7 +305,7 @@ export function useExploreAddCommentMutation(
         (old) => [...(old ?? []), optimistic],
       );
       queryClient.setQueryData<ExploreFeedInfiniteData>(
-        exploreKeys.feed(userId),
+        exploreKeys.feed(),
         (old) => patchCommentCountInInfinitePosts(old, postId, 1),
       );
       queryClient.setQueriesData<UserPostsInfiniteData>(
@@ -270,7 +332,7 @@ export function useExploreAddCommentMutation(
         );
       }
       if (userId && ctx?.prevFeed !== undefined) {
-        queryClient.setQueryData(exploreKeys.feed(userId), ctx.prevFeed);
+        queryClient.setQueryData(exploreKeys.feed(), ctx.prevFeed);
       }
       if (ctx.prevUserPosts) {
         for (const { queryKey, data } of ctx.prevUserPosts) {
@@ -285,11 +347,7 @@ export function useExploreAddCommentMutation(
       void queryClient.invalidateQueries({
         queryKey: exploreKeys.comments(variables.postId),
       });
-      if (userId) {
-        void queryClient.invalidateQueries({
-          queryKey: exploreKeys.feed(userId),
-        });
-      }
+      void queryClient.invalidateQueries({ queryKey: exploreKeys.feed() });
       void queryClient.invalidateQueries({
         predicate: (q) => isUserPostsQueryKey(q.queryKey),
       });
@@ -342,10 +400,10 @@ export function useExploreCreatePostMutation(userId: string | null) {
       });
     },
     onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: exploreKeys.feed(),
+      });
       if (userId) {
-        void queryClient.invalidateQueries({
-          queryKey: exploreKeys.feed(userId),
-        });
         void queryClient.invalidateQueries({
           predicate: (q) =>
             isUserPostsQueryKey(q.queryKey) && q.queryKey[2] === userId,
@@ -359,5 +417,4 @@ export function useExploreCreatePostMutation(userId: string | null) {
     },
   });
 }
-
 

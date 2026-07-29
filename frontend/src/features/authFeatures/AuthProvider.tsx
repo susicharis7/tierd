@@ -181,6 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const lastUserIdRef = useRef<string | null>(null);
   const twoFactorReqIdRef = useRef(0);
+  const initialTwoFactorChallengeSentForRef = useRef<string | null>(null);
 
   const syncProfile = useCallback(async (uid: string | null) => {
     lastUserIdRef.current = uid;
@@ -264,6 +265,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await twoFactorRepository.resendChallenge();
   }, []);
 
+  const sendInitialTwoFactorChallenge = useCallback(async () => {
+    const uid = session?.user?.id ?? lastUserIdRef.current;
+    if (!uid || initialTwoFactorChallengeSentForRef.current === uid) return;
+
+    initialTwoFactorChallengeSentForRef.current = uid;
+    try {
+      await twoFactorRepository.resendChallenge();
+    } catch (err) {
+      initialTwoFactorChallengeSentForRef.current = null;
+      throw err;
+    }
+  }, [session?.user?.id]);
+
   const verifyTwoFactorChallenge = useCallback(
     async (code: string, rememberDevice: boolean) => {
       await twoFactorRepository.verifyChallenge({ code, rememberDevice });
@@ -318,6 +332,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(sess);
       if (!sess?.user?.id) {
         markTwoFactorSessionVerified(lastUserIdRef.current, false);
+        initialTwoFactorChallengeSentForRef.current = null;
         setTwoFactorSessionVerified(false);
       } else {
         setTwoFactorSessionVerified(readTwoFactorSessionVerified(sess.user.id));
@@ -349,6 +364,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
     setTwoFactor(DEFAULT_2FA);
     setTwoFactorSessionVerified(false);
+    initialTwoFactorChallengeSentForRef.current = null;
     lastUserIdRef.current = null;
   }, [session?.user?.id]);
 
@@ -385,6 +401,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           emailMasked={twoFactor.emailMasked}
           statusError={twoFactor.statusError}
           onVerify={verifyTwoFactorChallenge}
+          onInitialSend={sendInitialTwoFactorChallenge}
           onResend={resendTwoFactorChallenge}
         />
       )}

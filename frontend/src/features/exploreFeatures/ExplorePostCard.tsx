@@ -17,6 +17,14 @@ import {
 import type { FeedPost, PostComment } from "./exploreTypes";
 import { FEED_POST_PREVIEW_CHARS } from "./exploreUiConstants";
 
+const TEXT_COLLAPSE_LINE_LIMIT = 15;
+const POST_COLLAPSE_MAX_HEIGHT = 16 * 1.45 * TEXT_COLLAPSE_LINE_LIMIT;
+const COMMENT_COLLAPSE_MAX_HEIGHT = 14 * 1.5 * TEXT_COLLAPSE_LINE_LIMIT;
+
+function shouldCollapseText(text: string) {
+  return text.split(/\r\n|\r|\n/).length > TEXT_COLLAPSE_LINE_LIMIT || text.length > FEED_POST_PREVIEW_CHARS;
+}
+
 export function ExplorePostCard({
   post,
   index,
@@ -62,11 +70,7 @@ export function ExplorePostCard({
   const [feedBodyExpanded, setFeedBodyExpanded] = useState(false);
   const [isEditingPost, setIsEditingPost] = useState(false);
   const [editDraft, setEditDraft] = useState(post.content);
-  const feedTextLong = post.content.length > FEED_POST_PREVIEW_CHARS;
-  const feedBodyText =
-    feedTextLong && !feedBodyExpanded
-      ? post.content.slice(0, FEED_POST_PREVIEW_CHARS).trimEnd()
-      : post.content;
+  const feedTextLong = shouldCollapseText(post.content);
 
   const authorName = authorDisplayName(post.author);
   const profilePath = `/profile/${post.author.username ?? post.author.id}`;
@@ -202,9 +206,18 @@ export function ExplorePostCard({
                 </div>
               ) : (
                 <>
-                  <p className="font-grot text-[16px] leading-[1.45] text-cream/90 whitespace-pre-line">
-                    {feedBodyText}
-                    {feedTextLong && !feedBodyExpanded ? "..." : null}
+                  <p
+                    className={cn(
+                      "font-grot text-[16px] leading-[1.45] text-cream/90 whitespace-pre-line",
+                      feedTextLong && !feedBodyExpanded && "overflow-hidden",
+                    )}
+                    style={
+                      feedTextLong && !feedBodyExpanded
+                        ? { maxHeight: POST_COLLAPSE_MAX_HEIGHT }
+                        : undefined
+                    }
+                  >
+                    {post.content}
                   </p>
                   {feedTextLong && (
                     <button
@@ -351,7 +364,10 @@ function CommentRow({
   deleting: boolean;
   onDelete: () => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const name = c.author.full_name?.trim() || c.author.username || "Anonymous";
+  const commentLong = shouldCollapseText(c.content);
+
   return (
     <div className="flex items-start gap-2.5">
       <UserAvatar
@@ -382,9 +398,28 @@ function CommentRow({
             </button>
           )}
         </div>
-        <p className="mt-1 font-grot text-[14px] leading-[1.5] text-cream/80 whitespace-pre-line">
+        <p
+          className={cn(
+            "mt-1 font-grot text-[14px] leading-[1.5] text-cream/80 whitespace-pre-line",
+            commentLong && !expanded && "overflow-hidden",
+          )}
+          style={
+            commentLong && !expanded
+              ? { maxHeight: COMMENT_COLLAPSE_MAX_HEIGHT }
+              : undefined
+          }
+        >
           {c.content}
         </p>
+        {commentLong && (
+          <button
+            type="button"
+            onClick={() => setExpanded((value) => !value)}
+            className="mt-1 font-mono-jb text-[10px] uppercase tracking-[0.1em] text-orange hover:text-orange-2"
+          >
+            {expanded ? "show less" : "show more"}
+          </button>
+        )}
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Heart, MessageSquare, Trash2, X } from "lucide-react";
 
@@ -336,7 +337,10 @@ function CommentRow({
   deleting: boolean;
   onDelete: () => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const name = c.author.full_name?.trim() || c.author.username || "Anonymous";
+  const isLongComment = c.content.split(/\r\n|\r|\n/).length > 15 || c.content.length > 1200;
+
   return (
     <li className="flex gap-3">
       <UserAvatar
@@ -367,9 +371,23 @@ function CommentRow({
             </button>
           )}
         </div>
-        <p className="mt-1 whitespace-pre-line font-grot text-[14px] text-cream/85 leading-[1.5]">
+        <p
+          className={cn(
+            "mt-1 whitespace-pre-line font-grot text-[14px] text-cream/85 leading-[1.5]",
+            isLongComment && !expanded && "max-h-[315px] overflow-hidden",
+          )}
+        >
           {c.content}
         </p>
+        {isLongComment && (
+          <button
+            type="button"
+            onClick={() => setExpanded((value) => !value)}
+            className="mt-2 font-mono-jb text-[10px] uppercase tracking-[0.1em] text-orange hover:text-orange-2"
+          >
+            {expanded ? "show less" : "show more"}
+          </button>
+        )}
       </div>
     </li>
   );

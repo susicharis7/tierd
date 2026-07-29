@@ -5,6 +5,7 @@ interface TwoFactorGateProps {
   emailMasked: string | null;
   statusError: string | null;
   onVerify: (code: string, rememberDevice: boolean) => Promise<void>;
+  onInitialSend: () => Promise<void>;
   onResend: () => Promise<void>;
 }
 
@@ -12,6 +13,7 @@ export function TwoFactorGate({
   emailMasked,
   statusError,
   onVerify,
+  onInitialSend,
   onResend,
 }: TwoFactorGateProps) {
   const [code, setCode] = useState("");
@@ -27,14 +29,14 @@ export function TwoFactorGate({
     initialCodeRequestSentRef.current = true;
 
     setResending(true);
-    onResend()
+    onInitialSend()
       .then(() => setNotice("A verification code was sent to your email."))
       .catch((err) => {
         const message = err instanceof Error ? err.message : "Could not send code.";
         setError(message);
       })
       .finally(() => setResending(false));
-  }, [onResend]);
+  }, [onInitialSend]);
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
